@@ -1,0 +1,8 @@
+python .env/lib/python3.7/site-packages/plantuml.py "../documentation/Component Diagram - Unfinished.plantuml"
+python .env/lib/python3.7/site-packages/plantuml.py "../documentation/Configure Sensor by BLE.plantuml"
+python .env/lib/python3.7/site-packages/plantuml.py "../documentation/Cyclic Sensor Reading nrf9160 Environment Sensors.plantuml"
+python .env/lib/python3.7/site-packages/plantuml.py "../documentation/Cyclic Sensor Reading.plantuml"
+python .env/lib/python3.7/site-packages/plantuml.py "../documentation/Firmware Update.plantuml"
+python .env/lib/python3.7/site-packages/plantuml.py "../documentation/startup nRF52840.plantuml"
+python .env/lib/python3.7/site-packages/plantuml.py "../documentation/startup nRF9160.plantuml"
+python .env/lib/python3.7/site-packages/plantuml.py "../companionAppStatemachine.plantuml"

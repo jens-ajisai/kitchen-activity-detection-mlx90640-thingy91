@@ -1,0 +1,39 @@
+menuconfig MCU_EXCHANGE_MODULE
+	bool "Mcu Exchange module"
+
+if MCU_EXCHANGE_MODULE
+
+config BLE_NRF9160_BRIDGE_AVAILABLE
+	bool "helper config"
+	default y if BLE_MODULE
+
+config USB_NRF9160_BRIDGE_AVAILABLE
+	bool "helper config"
+	default y if USB_CDC_ACM
+
+config MCU_EXCHANGE_THREAD_STACK_SIZE
+	int "Mcu Exchange module thread stack size. Consider cJson"
+	default 4096
+
+config MCU_EXCHANGE_EVENTS_LOG
+	bool "Enable logging for Mcu Exchange module events"
+	default y
+
+config MCU_EXCHANGE_UART_BUF_SIZE
+	int "Size of the uart buffer for commands"
+	default 4096
+
+config MCU_EXCHANGE_UART_INIT_TIMEOUT
+	int "Timeout until the uart becomes active"
+	default 10
+
+config MCU_EXCHANGE_UART
+	string "Label for the Uart device"
+	default "UART_1"
+
+endif # MCU_EXCHANGE_MODULE
+
+module = MCU_EXCHANGE_MODULE
+module-str = mcu exchange module
+source "subsys/logging/Kconfig.template.log_config"
+

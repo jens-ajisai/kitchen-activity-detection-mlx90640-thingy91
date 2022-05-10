@@ -1,0 +1,7 @@
+config WATCHDOG_TIMER_MAIN_CHANNEL
+	int "Timeout for the main channel watchdog in ms."
+	default 2000
+
+config WATCHDOG_TIMER_MCU_COMM_CHANNEL
+	int "Timeout for the mcu comm channel watchdog in ms."
+	default 10000

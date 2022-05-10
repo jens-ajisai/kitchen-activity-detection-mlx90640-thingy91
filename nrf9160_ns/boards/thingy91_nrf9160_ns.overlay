@@ -1,0 +1,72 @@
+/*
+ * This code is based on the asset_tracker_v2 overlay which has the below license
+ * nrf/applications/asset_tracker_v2/boards
+ * 
+ * Copyright (c) 2020 Nordic Semiconductor ASA
+ *
+ * SPDX-License-Identifier: LicenseRef-Nordic-5-Clause
+ */
+
+/ {
+	chosen {
+		zephyr,console = &uart0;
+		zephyr,shell-uart = &uart0;
+	};
+	aliases {
+		temp-sensor = &bme680;
+		humidity-sensor = &bme680;
+		accelerometer = &adxl362;
+	};
+
+	pwmleds0 {
+		compatible = "pwm-leds";
+		status = "okay";
+		pwm_led0: led_pwm_0 {
+			status = "okay";
+			pwms = <&pwm0 29>;
+			label = "LED0 red";
+		};
+		pwm_led1: led_pwm_1 {
+			status = "okay";
+			pwms = <&pwm0 30>;
+			label = "LED0 green";
+		};
+		pwm_led2: led_pwm_2 {
+			status = "okay";
+			pwms = <&pwm0 31>;
+			label = "LED0 blue";
+		};
+	};
+
+};
+
+/*
+&uart0 {
+	compatible = "nordic,nrf-uarte";
+	current-speed = <115200>;
+	status = "okay";
+	tx-pin = <18>;
+	rx-pin = <19>;
+//	/delete-property/ rts-pin;
+//	/delete-property/ cts-pin;
+};
+ */
+ 
+&uart1 {
+	current-speed = <115200>;
+	status = "okay";
+	tx-pin = <22>;
+	rx-pin = <23>;
+//	/delete-property/ rts-pin;
+//	/delete-property/ cts-pin;
+};
+
+/* Below is not necessary as already defined */
+&i2c2 {
+	bme680: bme680@76 {};
+	bh1749: bh1749@38 {};
+};
+
+&spi3 {
+	adxl362: adxl362@0 {};
+};

@@ -1,0 +1,84 @@
+menuconfig CAMERA_MODULE
+	bool "Camers module"
+
+if CAMERA_MODULE
+
+config CAMERA_THREAD_STACK_SIZE
+	int "Camers module thread stack size"
+	default 1024
+
+config CAMERA_WORK_THREAD_STACK_SIZE
+	int "Camers module thread stack size"
+	default 4096
+
+config CAMERA_EVENTS_LOG
+	bool "Enable logging for Camers module events"
+	default y
+
+config ARDUCAM_SPI_USE_ZEPHYR
+	bool "Use the zephyr SPI driver"
+
+config ARDUCAM_SPI_USE_NRFX
+	bool "Use the nrfx SPI driver"
+	select NRFX_SPIM
+	select NRFX_SPIM2
+	default y
+
+config ARDUCAM_TWI_USE_ZEPHYR
+	bool "Use the zephyr TWI driver"
+	select I2C
+
+config ARDUCAM_TWI_USE_NRFX
+	bool "Use the nrfx TWI driver"
+	select NRFX_TWIM
+	select NRFX_TWIM0
+	default y
+
+config CAMERA_IMAGE_CHUNCK_SIZE
+	int "Chunck size when reading image from camera"
+	default 10240
+
+
+endif # CAMERA_MODULE
+
+
+config CAMERA_DEFAULT_JPEG_SIZE
+	int "Default value for the jpeg size according to ArduCAM_regs.h. Default is OV2640_1600x1200"
+	default 8
+
+config CAMERA_DEFAULT_LIGHT_MODE
+	int "Default value for the light mode according to ArduCAM_regs.h. Default is Auto"
+	default 0
+
+config CAMERA_DEFAULT_COLOR_SATURATION
+	int "Default value for the jpeg size according to ArduCAM_regs.h. Default is Saturation0"
+	default 4
+
+config CAMERA_DEFAULT_BRIGHTNESS
+	int "Default value for the jpeg size according to ArduCAM_regs.h. Default is Brightness0"
+	default 4
+
+config CAMERA_DEFAULT_CONTRAST
+	int "Default value for the jpeg size according to ArduCAM_regs.h. Default is Contrast0"
+	default 4
+
+config CAMERA_DEFAULT_SPECIAL_EFFECTS
+	int "Default value for the jpeg size according to ArduCAM_regs.h. Default is Normal"
+	default 7
+
+config CAMERA_DEFAULT_JPEG_QUALITY
+	int "Default value for the jpeg size according to ArduCAM_regs.h. Default is 10"
+	default 10
+
+config CAMERA_DEFAULT_CAM_INTERVAL
+	int "Camera takes an image every x seconds. Default is 10"
+	default 10
+
+
+module = CAMERA_MODULE
+module-str = Camers module
+source "subsys/logging/Kconfig.template.log_config"
+
+module = ARDUCAM_MODULE
+module-str = Arducam module
+source "subsys/logging/Kconfig.template.log_config"

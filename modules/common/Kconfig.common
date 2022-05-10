@@ -1,0 +1,21 @@
+config WAIT_FOR_SERIAL_ATTACHED
+	select UART_LINE_CTRL
+	bool "Wait until serial is attached on startup"
+
+config WAIT_FOR_MANUAL_START
+	bool "Do not module_set_state(MODULE_STATE_READY) on startup"
+		
+config MEMFAULT_DEVICE_ID
+	string "Device ID used for memfault"
+	default "N/A"	
+
+config HEAP_MEMORY_STATISTICS
+	bool "Add hooks to track allocated memory by my_malloc and my_free. Otherwise map to k_*"
+
+module = MEMORY_STAT
+module-str = memory statistics
+source "subsys/logging/Kconfig.template.log_config"
+
+module = DIAG
+module-str = Diagnostics nrf52840
+source "${ZEPHYR_BASE}/subsys/logging/Kconfig.template.log_config"

@@ -1,0 +1,19 @@
+menuconfig SENSORS91_MODULE
+	bool "Sensor module"
+	default y
+
+if SENSORS91_MODULE
+
+config SENSORS_THREAD_STACK_SIZE
+	int "Sensor module thread stack size"
+	default 8192
+
+config SENSORS_EVENTS_LOG
+	bool "Enable logging for Cloud module events"
+	default y
+
+endif # SENSORS91_MODULE
+
+module = SENSORS91_MODULE
+module-str = Sensor module
+source "subsys/logging/Kconfig.template.log_config"

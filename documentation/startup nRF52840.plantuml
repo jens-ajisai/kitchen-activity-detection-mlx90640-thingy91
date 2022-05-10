@@ -1,0 +1,108 @@
+@startuml
+autonumber
+
+== Startup ==
+
+note across : nRF52840
+
+participant "main()" as main
+
+participant "BLE" as nRF52840_ble
+participant "MCU Exchange" as nRF52840_mcuEx
+participant "Sensors" as nRF52840_sensors
+participant "MLX90640" as nRF52840_mlx90640
+participant "Communication Control & Bridge" as nRF52840_comm
+participant "Watchdog" as nRF52840_watchdog
+
+main -> main ++ : main()
+main -> main : enable_usb_console()
+note left : optionally wait for serial attached.
+main -> main : boot_write_img_confirmed()
+note left : mcuboot: confirm new image if required
+main -> main : shell_mgmt_register_group()\nos_mgmt_register_group()\nimg_mgmt_register_group()
+main -> main : init_utils()
+note left : register cJSONs memory allocation hooks
+main -> main : cert_provision()
+note left : register adafruit.io certificates for MQTT over ssl
+'main -> main : connect_lte()
+'main -> main : memfault_zephyr_port_post_data()
+main -> main : event_manager_init()
+main -> main ++ : sendReady()
+note left : sends MODULE_STATE_READY of module main
+main -> nRF52840_ble ++ : MODULE_STATE_READY
+nRF52840_ble -> nRF52840_ble ++ : init_module()
+nRF52840_ble -> nRF52840_ble : bt_conn_cb_register()
+nRF52840_ble -> nRF52840_ble : bt_conn_auth_cb_register()
+nRF52840_ble -> nRF52840_ble -- : bt_enable()
+deactivate nRF52840_ble
+nRF52840_ble -> nRF52840_ble ++ : bt_ready()
+note left: BLE callback
+nRF52840_ble -> nRF52840_ble : settings_load()
+nRF52840_ble -> nRF52840_ble : heaty_service_init()
+note left : BLE service to send mlx90640 data
+nRF52840_ble -> nRF52840_ble : bt_serial_init()
+note left : not used?
+nRF52840_ble -> nRF52840_ble : time_service_init()
+note left : BLE service to set the time (if nrf9160 is not available)
+nRF52840_ble -> nRF52840_ble : bt_serial_nrf91_bridge_init()
+note left : BLE service to connect UART to nrf9160
+nRF52840_ble -> nRF52840_ble : shell_bt_nus_init()
+note left : BLE service to make shell available to NUS service
+nRF52840_ble -> nRF52840_ble : img_mgmt_set_upload_cb()
+nRF52840_ble -> nRF52840_ble : smp_bt_register()
+note left : BLE service for OTA updates
+nRF52840_ble -> nRF52840_ble ++ : advertise()
+note left : actually submit advertising work
+nRF52840_ble -> nRF52840_ble -- : bt_le_adv_start()
+deactivate nRF52840_ble
+
+
+main -> nRF52840_mcuEx ++ : MODULE_STATE_READY
+nRF52840_mcuEx -> nRF52840_mcuEx ++ : init()
+nRF52840_mcuEx -> nRF52840_mcuEx  : uart_line_init()
+note left : gets device,\nwaits for the line to become valid\nand attaches isq callback
+nRF52840_mcuEx -> nRF52840_mcuEx  : uart_irq_rx_enable()
+deactivate nRF52840_mcuEx
+deactivate nRF52840_mcuEx
+
+main -> nRF52840_sensors ++ : MODULE_STATE_READY
+nRF52840_sensors -> nRF52840_sensors ++ : init_module()
+nRF52840_sensors -> nRF52840_mlx90640 ++ : init_mlx60940()
+nRF52840_mlx90640 -> nRF52840_mlx90640 : k_work_queue_init()\nk_work_queue_start()\nk_work_init_delayable()\nk_work_reschedule_for_queue()
+note left : Initialize the workqueue and work for periodic sensor readings
+nRF52840_mlx90640 -> nRF52840_mlx90640 ++ : init_mlx60940_internal()
+nRF52840_mlx90640 -> nRF52840_mlx90640 : MLX90640_I2CInit()
+note left : gets device binding
+nRF52840_mlx90640 -> nRF52840_mlx90640 : MLX90640_I2CRead()
+note left : reads the serial number to check it
+nRF52840_mlx90640 -> nRF52840_mlx90640 : MLX90640_DumpEE()
+note left : logs the internal calibration
+nRF52840_mlx90640 -> nRF52840_mlx90640 : MLX90640_ExtractParameters()
+note left : gets parameters for later conversion into °C
+nRF52840_mlx90640 -> nRF52840_mlx90640 : MLX90640_SetChessMode()\nMLX90640_GetCurMode()
+note left : sets chess reading mode and verifies it
+nRF52840_mlx90640 -> nRF52840_mlx90640 : MLX90640_SetResolution()\MLX90640_GetCurResolution()
+note left : sets resolution to 18bit
+nRF52840_mlx90640 -> nRF52840_mlx90640 -- : MLX90640_SetRefreshRate()\MLX90640_GetRefreshRate()
+note left : sets refreshrate to 2Hz
+nRF52840_mlx90640 -> nRF52840_sensors --
+deactivate nRF52840_sensors
+nRF52840_sensors -> nRF52840_sensors : settings_util_init()
+note left : calls settings_subsys_init() to initialize settings subsystem\n(unused for this project)
+deactivate nRF52840_sensors
+
+main -> nRF52840_comm ++ : MODULE_STATE_READY
+nRF52840_comm -> nRF52840_comm ++-- : init_module()
+deactivate nRF52840_comm
+
+deactivate main
+main -> nRF52840_watchdog ++ : init_and_start_watchdog()
+nRF52840_watchdog -> nRF52840_watchdog : task_wdt_init()
+nRF52840_watchdog -> nRF52840_watchdog : task_wdt_add()
+note left : add main channel
+nRF52840_watchdog -> nRF52840_watchdog : task_wdt_add()
+note left : add mcu comm channel
+nRF52840_watchdog -> main --
+deactivate main
+note left: main thread terminates\nmodule threads keep running
+@enduml

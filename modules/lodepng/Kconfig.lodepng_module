@@ -1,0 +1,2 @@
+menuconfig LODEPNG
+	bool "Add support for png encoding. Limited to greyscale 32*24 images due to high memory demand"

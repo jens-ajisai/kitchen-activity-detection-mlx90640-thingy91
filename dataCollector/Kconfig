@@ -1,0 +1,13 @@
+menu "heaty_dataCollector"
+
+rsource "../modules/Kconfig.myModules"
+
+endmenu
+
+menu "Zephyr Kernel"
+source "Kconfig.zephyr"
+endmenu
+
+module = HEATY
+module-str = Heaty nrf52840
+source "${ZEPHYR_BASE}/subsys/logging/Kconfig.template.log_config"

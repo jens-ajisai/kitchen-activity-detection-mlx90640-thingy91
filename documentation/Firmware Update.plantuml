@@ -1,0 +1,71 @@
+@startuml
+autonumber
+
+== Firmware Update ==
+
+participant "PC" as pc_mcumgr
+participant "Device Manager App" as mobile_devManager
+participant "Shell subsystem" as nRF52840_shell
+participant "Mcumgr subsystem" as nRF52840_mcumgr
+participant "MCU Exchange/nConnectivity Bridge" as nRF52840_bridge
+participant "Shell subsystem" as nRF9160_shell
+participant "Mcumgr subsystem" as nRF9160_mcumgr
+
+note across : nRF52840 via USB
+
+pc_mcumgr -> nRF52840_shell ++ : invoke mcumgr
+note left: ~/go/bin/mcumgr\n  --conntype serial\n  --connstring "/dev/tty.usbmodem146103,baud=115200,mtu=1024"\n  image upload nrf52840/build/zephyr/app_update.bin
+
+nRF52840_shell -> nRF52840_mcumgr --++ : forwarding
+nRF52840_mcumgr -> nRF52840_mcumgr
+note right: mcumgr subsytem handles the update\nImage gets confirmed in main()
+deactivate
+
+
+note across : nRF52840 via BLE
+autonumber 1
+
+alt mcumgr
+	    pc_mcumgr -> nRF52840_mcumgr ++ : invoke mcumgr
+	    note left: ~/go/bin/mcumgr\n  --conntype ble\n  --connstring "ctlr_name=hci0,peer_name=Heaty"\n  image upload nrf52840/build/zephyr/app_update.bin
+	    note right: Not verified. Due to a bug in MacOS until 12.3.1 BLE on command line was not working.\nI was using the iOS app Device Manager by Nordic.
+else Nordic Device Manager App
+	    mobile_devManager -> nRF52840_mcumgr: upload the image in the GUI
+	end
+
+nRF52840_mcumgr -> nRF52840_mcumgr
+note right: mcumgr subsytem handles the update\nImage gets confirmed in main()
+deactivate
+
+note across : nRF9160 via USB
+autonumber 1
+
+pc_mcumgr -> nRF52840_bridge ++ : invoke mcumgr using the serial device that passes thru to the nrf9160
+note left: ~/go/bin/mcumgr\n  --conntype serial\n  --connstring "/dev/tty.usbmodem146101,baud=115200,mtu=1024"\n  image upload nrf9160_ns/build/zephyr/app_update.bin
+
+nRF52840_bridge -> nRF9160_shell --++ :
+
+nRF9160_shell -> nRF9160_mcumgr --++ :
+nRF9160_mcumgr -> nRF9160_mcumgr
+note right: mcumgr subsytem handles the update\nImage gets confirmed in main()
+deactivate
+
+note across : nRF9160 via BLE
+autonumber 1
+
+pc_mcumgr -> pc_mcumgr : Create a virtual serial device with socat
+note left : socat -d -d pty,raw,echo=0 pty,raw,echo=0
+pc_mcumgr -> pc_mcumgr : Connect virtual serial device to BLE Characteristic BT_UUID_SERIAL_NRF91_BRIDGE_RX
+note left : python3 scripts/ble_nrf9160_shell_forMcuboot.py
+pc_mcumgr -> nRF52840_bridge ++ : invoke mcumgr using the virtual serial device that passes thru to the nrf9160
+note left: ~/go/bin/mcumgr\n  --conntype serial\n  --connstring "/dev/tty.usbmodem146101,baud=115200,mtu=1024"\n  image upload nrf9160_ns/build/zephyr/app_update.bin
+
+nRF52840_bridge -> nRF9160_shell --++ :
+
+nRF9160_shell -> nRF9160_mcumgr --++ :
+nRF9160_mcumgr -> nRF9160_mcumgr
+note right: mcumgr subsytem handles the update\nImage gets confirmed in main()
+deactivate
+
+
+@enduml

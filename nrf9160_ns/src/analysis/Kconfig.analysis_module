@@ -1,0 +1,19 @@
+menuconfig ANALYSIS_MODULE
+	bool "Analysis module"
+	default y
+
+if ANALYSIS_MODULE
+
+config ANALYSIS_THREAD_STACK_SIZE
+	int "Analysis module thread stack size"
+	default 8192
+
+config ANALYSIS_EVENTS_LOG
+	bool "Enable logging for Cloud module events"
+	default y
+
+endif # ANALYSIS_MODULE
+
+module = ANALYSIS_MODULE
+module-str = Analysis module
+source "subsys/logging/Kconfig.template.log_config"

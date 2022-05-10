@@ -1,0 +1,117 @@
+Commands using the % instead of the + are proprietary commands
+
+* Queries
+************************
+# Request model identification
+AT+CGMM
+AT%HWVERSION
+# Request revision identification
+AT+CGMR
+# Request manufacturer identification
+AT+CGMI
+# Request product serial number identification (https://infocenter.nordicsemi.com/index.jsp?topic=%2Fref_at_commands%2FREF%2Fat_commands%2Fgeneral%2Fcgsn_set.html)
+AT+CGSN=1
+# Request IMSI (error!)
+AT+CIMI
+# Request modem build UUID
+AT%XMODEMUUID
+# Reqest Functional mode
+AT+CFUN?
+# checks if a PIN is needed (error)
+AT+CPIN?
+# Remaining PIN retries
+AT+CPINR="SIM PIN"
+# Checks the Mode of operation (CS/PS)
+AT+CEMODE?
+# Reads the current signal quality, ...
+AT+CESQ
+# Checks the activity status
+AT+CPAS
+# Returns available frequency bands
+AT%XCBAND=?
+# Requests functionality mode
+AT+CFUN?
+# Requests the country-specific data (if any set)
+%XCOUNTRYDATA?
+# Reads modem parameters.
+AT%XMONITOR
+# Reads current mobile network operator configuration (1 for automatic)
+AT%XOPCONF?
+# Starts neighboring cell measurements and reports the channel parameters.
+AT%NCELLMEAS
+# Reads context information for PDP
+AT+CGDCONT?
+
+* Subscribe info
+************************
+# Mobile termination error notification +CMEE (?)
+AT+CMEE=1
+# Network error code notification +CNEC (?, error)
+AT+CNEC=1
+# Packet domain event notification +CGEREP (?)
+AT+CGEREP=1
+# Network registration status notification +CEREG (higher number means more info)
+AT+CEREG=5
+# enables service and message indicators
+AT+CIND=1,0,1
+# subscribes Universal Integrated Circuit Card (UICC) state notifications. (error)
+AT%XSIM=1
+# subscribes and configures unsolicited result code notifications
+AT+CSCON=3
+
+* Configuration
+************************
+# Selects the automatic network selection (1 with more params is manual)
+AT+COPS=0
+# Sets current mobile network operator configuration (1 for automatic)
+AT%XOPCONF: 1
+# Limits using Bands (most left is 1, next is 2, ... Band 1 and 8 in the sample below)
+%XBANDLOCK=2,"10000001"
+# Sets the PDP context info for context (1 first param)
+AT+CGDCONT=0,"IP","soracom.io","sora","sora"
+
+* Not needed and not working
+************************
+# Set command specifies authentication parameters for a Packet Data Network (PDN)
+AT+CGAUTH=1,1,"sora","sora"
+# Activate (first param) PDP context 1 (second param) +CGACT
+AT+CGACT=1,1
+
+
+* Actions
+************************
+# Sets the device to minimum functionality.
+AT+CFUN=0
+# Sets the device to full functionality.
+AT+CFUN=1
+# Sets the device to flight mode.
+AT+CFUN=4
+
+# Requests operator ID (https://infocenter.nordicsemi.com/index.jsp?topic=%2Fref_at_commands%2FREF%2Fat_commands%2Fmobile_termination_errors%2Fcmee_read.html)
+AT%XOPERID
+
+
+* Certs
+************************
+# List all Certs
+AT%CMNG=1
+
+
+Links
+* Bands
+** https://www.soumu.go.jp/main_content/000692919.pdf
+* AT Commands
+** https://jimmywongiot.com/2021/05/08/at-commands-on-the-nordic-nrf9160/
+** https://infocenter.nordicsemi.com/pdf/nrf91_at_commands_v2.0.pdf
+* Instructions
+** https://www.hackster.io/virgilvox/nrf9160-feather-soracom-beam-3b420f
+** https://www.jaredwolff.com/the-nrf9160-feather-connects/
+
+
+
+
+
+AT+CSTT="soracom.io","sora","sora"
+
++CME ERROR: 0
+AT+CGAUTH=1,1,"sora","sora"

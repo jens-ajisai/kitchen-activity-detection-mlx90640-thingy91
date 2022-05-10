@@ -1,0 +1,27 @@
+#
+# Copyright (c) 2020 Nordic Semiconductor
+#
+# SPDX-License-Identifier: LicenseRef-Nordic-5-Clause
+#
+
+if LOG
+
+menu "Event options"
+
+comment "Initially logged events"
+
+config BRIDGE_LOG_UART_DATA_EVENT
+	bool "UART data event"
+
+config BRIDGE_LOG_CDC_DATA_EVENT
+	bool "CDC data event"
+
+config BRIDGE_LOG_BLE_DATA_EVENT
+	bool "BLE data event"
+
+config BRIDGE_LOG_PEER_CONN_EVENT
+	bool "Peer connection event"
+
+endmenu
+
+endif

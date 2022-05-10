@@ -1,0 +1,26 @@
+@startuml
+autonumber
+
+== Configure Sensor by BLE ==
+
+note across : nRF52840
+
+participant "Companion App" as mobile_companion
+participant "BLE" as nRF52840_ble
+participant "Sensors" as nRF52840_sensors
+participant "Communication Control & Bridge" as nRF52840_comm
+participant "Sensors" as nRF52840_sensors
+participant "MLX90640 Sensor" as nRF52840_mlx90640
+
+mobile_companion -> nRF52840_ble ++ : Write BT_UUID_SET_INTERVAL characteristic
+nRF52840_ble -> nRF52840_ble ++ : write_set_interval()
+nRF52840_ble -> nRF52840_ble ++ : set_heatmap_interval_cb()
+nRF52840_ble -> nRF52840_comm --++ : BT_EVT_SET_HEATMAP_INTERVAL
+deactivate
+deactivate
+deactivate
+nRF52840_comm -> nRF52840_sensors --++ : SENSORS_EVT_SET_INTERVAL
+nRF52840_sensors -> nRF52840_mlx90640 -- : set_inverval_mlx60940()
+
+
+@enduml

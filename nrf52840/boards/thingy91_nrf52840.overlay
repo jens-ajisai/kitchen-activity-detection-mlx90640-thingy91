@@ -1,0 +1,66 @@
+/*
+ * This code is based on the asset_tracker_v2 overlay which has the below license
+ * nrf/applications/asset_tracker_v2/boards
+ * 
+ * Copyright (c) 2020 Nordic Semiconductor ASA
+ *
+ * SPDX-License-Identifier: LicenseRef-Nordic-5-Clause
+ */
+
+/ {
+	chosen {
+		zephyr,console = &cdc_acm_uart1;
+		zephyr,shell-uart = &cdc_acm_uart2;
+	};
+};
+
+&uart0 {
+	compatible = "nordic,nrf-uarte";
+	current-speed = <115200>;
+	status = "okay";
+	tx-pin = <15>;
+	rx-pin = <11>;
+//	/delete-property/ rts-pin;// <21>;
+//	/delete-property/ cts-pin;// <20>;
+};
+
+&uart1 {
+	current-speed = <115200>;
+	status = "okay";
+	tx-pin = <25>;
+	rx-pin = <32>;
+//	/delete-property/ rts-pin;// <22>;
+//	/delete-property/ cts-pin;// <19>;
+};
+
+&i2c0 {
+	compatible = "nordic,nrf-twim";
+	status = "okay";
+	sda-pin = <30>;
+	scl-pin = <5>;
+	clock-frequency = <I2C_BITRATE_STANDARD>;
+
+	mlx90640: mlx90640@33 {
+		compatible = "mlx90640";
+		reg = <0x33>;
+		label = "MLX90640";
+	};
+};
+
+&zephyr_udc0 {
+	cdc_acm_uart0: cdc_acm_uart0 {
+		compatible = "zephyr,cdc-acm-uart";
+		label = "CDC_ACM_0";
+	};
+
+	cdc_acm_uart1: cdc_acm_uart1 {
+		compatible = "zephyr,cdc-acm-uart";
+		label = "CDC_ACM_1";
+	};
+
+	cdc_acm_uart2: cdc_acm_uart2 {
+		compatible = "zephyr,cdc-acm-uart";
+		label = "CDC_ACM_2";
+	};
+
+};

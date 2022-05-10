@@ -1,0 +1,68 @@
+menuconfig MQTT_MODULE
+	bool "Mqtt module"
+
+if MQTT_MODULE
+
+config MQTT_THREAD_STACK_SIZE
+	int "mqtt module thread stack size"
+	default 8192
+
+config MQTT_EVENTS_LOG
+	bool "Enable logging for Cloud module events"
+	default y
+
+config MQTT_CLIENT_ID
+	string "MQTT Client ID"
+	default "my-client-id"
+
+config MQTT_BROKER_HOSTNAME
+	string "MQTT broker hostname"
+	default "mqtt.eclipseprojects.io"
+
+config MQTT_BROKER_PORT
+	int "MQTT broker port"
+	default 1883
+
+config MQTT_USER_NAME
+	string "MQTT user name"
+	default "username"
+
+config MQTT_PASSWORD
+	string "MQTT password"
+	default "password"
+
+config MQTT_TOPIC_TEMPERATURE
+	string "MQTT topic for temperature"
+	default "topic"
+
+config MQTT_TOPIC_HUMIDITY
+	string "MQTT topic for humidity"
+	default "topic"
+
+config MQTT_TOPIC_HEATMAP
+	string "MQTT topic for heatmap sensor data"
+	default "topic"
+
+config MQTT_MESSAGE_BUFFER_SIZE
+	int "mqtt module message buffer size"
+	default 512
+
+config MQTT_RECONNECT_DELAY_S
+	int "Seconds to delay before attempting to reconnect to the broker."
+	default 60
+
+config MQTT_TLS_SESSION_CACHING
+	bool "Enable TLS session caching"
+
+config MQTT_TLS_PEER_VERIFY
+	int "Set peer verification level"
+	default 2
+	help
+		Set to 0 for VERIFY_NONE, 1 for VERIFY_OPTIONAL, and 2 for
+		VERIFY_REQUIRED.
+
+endif # MQTT_MODULE
+
+module = MQTT_MODULE
+module-str = Mqtt module
+source "subsys/logging/Kconfig.template.log_config"

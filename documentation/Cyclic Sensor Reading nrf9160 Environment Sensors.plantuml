@@ -1,0 +1,34 @@
+@startuml
+autonumber
+
+== Cyclic Sensor Reading nrf9160 Environment Sensors ==
+
+participant "Sensors" as nRF52840_sensors
+participant "Analysis" as nrf9160_analysis
+participant "MQTT" as nrf9160_mqtt
+
+
+participant "MQTT Server" as cloud_mqtt
+participant "Homebridge" as cloud_homebridge
+participant "Homekit" as mobile_homekit
+
+
+note across : nRF9160
+
+nRF52840_sensors -> nRF52840_sensors ++: sensor_event
+note left: periodic sensor reading\nby CAF sensors module
+nRF52840_sensors -> nRF52840_sensors : handle_sensor_event()
+nRF52840_sensors -> nrf9160_analysis --++ : SENSORS_EVT_ENV_TEMPERATURE\n  || SENSORS_EVT_ENV_HUMIDITY
+
+nrf9160_analysis -> nrf9160_mqtt --++ : MQTT_EVT_SEND
+
+nrf9160_mqtt -> nrf9160_mqtt ++ : mqtt_client_module_data_publish()
+nrf9160_mqtt -> cloud_mqtt -- : mqtt_publish()
+deactivate nrf9160_mqtt
+
+cloud_mqtt -> cloud_homebridge -- : notify listeners
+cloud_homebridge -> mobile_homekit -- : notify change
+mobile_homekit -> mobile_homekit -- : send a push message
+
+
+@enduml

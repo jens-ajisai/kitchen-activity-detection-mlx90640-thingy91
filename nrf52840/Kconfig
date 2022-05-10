@@ -1,0 +1,15 @@
+rsource "../modules/Kconfig.myModules"
+
+rsource "src/commCtrl/Kconfig.commCtrl_module"
+rsource "src/commCtrl/bridge/modules/Kconfig"
+rsource "src/commCtrl/bridge/events/Kconfig"
+
+# In general, try to avoid adding redundant dependencies. They can make the structure of the Kconfig files harder to understand, and also make changes more error-prone, since it can be hard to spot that the same dependency is added twice.
+
+menu "Zephyr Kernel"
+source "Kconfig.zephyr"
+endmenu
+
+module = HEATY
+module-str = Heaty nrf52840
+source "${ZEPHYR_BASE}/subsys/logging/Kconfig.template.log_config"

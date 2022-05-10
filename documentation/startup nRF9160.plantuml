@@ -1,0 +1,75 @@
+@startuml
+autonumber
+
+== Startup ==
+
+participant "main()" as main
+
+participant "MQTT" as nrf9160_mqtt
+participant "MCU Exchange" as nrf9160_mcuEx
+participant "Sensors" as nrf9160_sensors
+participant "Analysis" as nrf9160_analysis
+participant "Watchdog" as nrf9160_watchdog
+
+note across : nRF9160
+
+main -> main ++ : main()
+main -> main : enable_usb_console()
+note left : optionally wait for serial attached.
+main -> main : boot_write_img_confirmed()
+note left : mcuboot: confirm new image if required
+main -> main : shell_mgmt_register_group()\nos_mgmt_register_group()\nimg_mgmt_register_group()
+main -> main : init_utils()
+note left : register cJSONs memory allocation hooks
+main -> main : cert_provision()
+main -> main : modem_key_mgmt_exists()\nmodem_key_mgmt_cmp()\nmodem_key_mgmt_delete()\nmodem_key_mgmt_write()
+
+note left : register adafruit.io certificates for MQTT over ssl
+main -> main : connect_lte()
+main -> main : memfault_zephyr_port_post_data()
+main -> main : event_manager_init()
+main -> main ++ : sendReady()
+note left : sends MODULE_STATE_READY of module main
+main -> nrf9160_mqtt ++ : MODULE_STATE_READY
+nrf9160_mqtt -> nrf9160_mqtt ++ : mqtt_client_module_init()
+note left : also registers callbacks
+nrf9160_mqtt -> nrf9160_mqtt ++ : client_init()
+nrf9160_mqtt -> nrf9160_mqtt : mqtt_client_init()
+nrf9160_mqtt -> nrf9160_mqtt -- : broker_init()
+nrf9160_mqtt -> nrf9160_mqtt ++ : mqtt_client_module_connect()
+nrf9160_mqtt -> nrf9160_mqtt : mqtt_connect()
+nrf9160_mqtt -> nrf9160_mqtt : fds_init()
+deactivate
+
+note left : configures client and broker
+deactivate
+deactivate
+
+main -> nRF9160_mcuEx ++ : MODULE_STATE_READY
+nRF9160_mcuEx -> nRF9160_mcuEx ++ : init()
+nRF9160_mcuEx -> nRF9160_mcuEx  : uart_line_init()
+note left : gets device,\nwaits for the line to become valid\nand attaches isq callback
+nRF9160_mcuEx -> nRF9160_mcuEx  : uart_irq_rx_enable()
+deactivate nRF9160_mcuEx
+deactivate nRF9160_mcuEx
+
+main -> nRF9160_sensors ++ : MODULE_STATE_READY
+nRF9160_sensors -> nRF9160_sensors ++ : init()
+note left : The CAF sensor module is statically configures\nand also starts by MODULE_STATE_READY
+deactivate nRF9160_sensors
+deactivate
+
+main -> nrf9160_analysis ++ : MODULE_STATE_READY
+nrf9160_analysis -> nrf9160_analysis ++ : init()
+note left : Nothing to initialize here
+deactivate nrf9160_analysis
+deactivate
+
+main -> nRF9160_watchdog ++ : init_and_start_watchdog()
+nRF9160_watchdog -> nRF9160_watchdog : task_wdt_init()
+nRF9160_watchdog -> nRF9160_watchdog : task_wdt_add()
+note left : add main channel
+nRF9160_watchdog -> nRF9160_watchdog : task_wdt_add()
+note left : add mcu comm channel
+nRF9160_watchdog -> main --
+@enduml

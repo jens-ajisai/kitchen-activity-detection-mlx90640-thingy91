@@ -1,0 +1,25 @@
+#
+# Copyright (c) 2021 Nordic Semiconductor
+#
+# SPDX-License-Identifier: LicenseRef-Nordic-5-Clause
+#
+
+menuconfig COMMCTRL_MODULE
+	bool "CommCtrl module"
+	default y
+
+if COMMCTRL_MODULE
+
+config COMMCTRL_THREAD_STACK_SIZE
+	int "CommCtrl module thread stack size. Consider cJson."
+	default 2048
+
+config COMMCTRL_EVENTS_LOG
+	bool "Enable logging for CommCtrl module events"
+	default y
+
+endif # COMMCTRL_MODULE
+
+module = COMMCTRL_MODULE
+module-str = CommCtrl module
+source "subsys/logging/Kconfig.template.log_config"

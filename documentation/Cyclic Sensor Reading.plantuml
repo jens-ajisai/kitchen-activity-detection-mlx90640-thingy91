@@ -1,0 +1,76 @@
+@startuml
+autonumber
+
+== Cyclic Sensor Reading ==
+
+participant "MLX90640 Sensor" as nRF52840_mlx90640
+participant "MLX90640" as mlx90640
+participant "Sensors" as nRF52840_sensors
+participant "Communication Control & Bridge" as nRF52840_comm
+participant "BLE" as nRF52840_ble
+participant "MCU Exchange" as nRF52840_mcuEx
+
+participant "MCU Exchange" as nrf9160_mcuEx
+participant "Analysis" as nrf9160_analysis
+participant "MQTT" as nrf9160_mqtt
+participant "Modem" as nrf9160_lte
+
+participant "MQTT Server" as cloud_mqtt
+participant "Homebridge" as cloud_homebridge
+participant "Homekit" as mobile_homekit
+
+
+note across : nRF52840
+
+activate nRF52840_mlx90640
+nRF52840_mlx90640 -> nRF52840_mlx90640 ++ : static void read_heat_map()
+note left: every 10s
+nRF52840_mlx90640 -> mlx90640 ++ : Read 2 pages and convert to a full reading in °C
+mlx90640 -> nRF52840_mlx90640 -- : Return data as float array
+nRF52840_mlx90640 -> nRF52840_sensors --++ : notify_heatMap_cb()
+deactivate nRF52840_mlx90640
+nRF52840_sensors -> nRF52840_comm --++ : SENSORS_EVT_HEAT_MAP_DATA_READY
+nRF52840_comm -> nRF52840_comm ++ : prepareAndSendHeatmap()
+nRF52840_comm -> nRF52840_comm : convertAndScaleHeatMap()
+nRF52840_comm -> nRF52840_comm : compressData()
+nRF52840_comm -> nRF52840_comm ++ : sendToBle()
+nRF52840_comm -> nRF52840_comm ++ : sendEvToBle()
+nRF52840_comm -> nRF52840_ble --++ : BT_EVT_SERIAL_SEND
+nRF52840_ble -> nRF52840_ble ++ : serialSend()
+nRF52840_ble -> nRF52840_ble : base64_encode()
+nRF52840_ble -> nRF52840_ble ++ : serialSend_cb()
+nRF52840_ble -> nRF52840_ble -- : bt_gatt_notify_uuid()
+deactivate nRF52840_ble
+deactivate nRF52840_ble
+
+deactivate nRF52840_comm
+nRF52840_comm -> nRF52840_comm ++ : sendToNrf9160()
+nRF52840_comm -> nRF52840_mcuEx --++ : MCU_EXCHANGE_EVT_HEAT_MAP_DATA_READY
+deactivate nRF52840_comm
+deactivate nRF52840_comm
+nRF52840_mcuEx -> nRF52840_mcuEx ++ : send_message()
+nRF52840_mcuEx -> nRF52840_mcuEx : encode_message()
+nRF52840_mcuEx -> nRF52840_mcuEx -- : uart_poll_out()
+deactivate nRF52840_mcuEx
+
+note across : nRF9160
+
+nrf9160_mcuEx -> nrf9160_mcuEx ++ : isr()
+nrf9160_mcuEx -> nrf9160_mcuEx : uart_rx_handler()
+nrf9160_mcuEx -> nrf9160_mcuEx --: MCU_EXCHANGE_EVT_DATA_READY
+nrf9160_mcuEx -> nrf9160_mcuEx ++ : handle_message()
+nrf9160_mcuEx -> nrf9160_mcuEx : parse_message()
+nrf9160_mcuEx -> nrf9160_analysis : MCU_EXCHANGE_EVT_HEAT_MAP_DATA_READY
+deactivate nrf9160_mcuEx
+
+nrf9160_analysis -> nrf9160_mqtt ++ : MQTT_EVT_SEND
+
+nrf9160_mqtt -> nrf9160_mqtt ++ : mqtt_client_module_data_publish()
+nrf9160_mqtt -> cloud_mqtt -- : mqtt_publish()
+deactivate nrf9160_mqtt
+
+cloud_mqtt -> cloud_homebridge -- : notify listeners
+cloud_homebridge -> mobile_homekit -- : notify change
+mobile_homekit -> mobile_homekit -- : send a push message
+
+@enduml

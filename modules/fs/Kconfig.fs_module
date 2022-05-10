@@ -1,0 +1,27 @@
+menuconfig FS_MODULE
+	bool "fs module"
+
+if FS_MODULE
+
+config FS_THREAD_STACK_SIZE
+	int "fs module thread stack size"
+	default 2048
+
+config FS_EVENTS_LOG
+	bool "Enable logging for fs module events"
+	default y
+
+config MAX_PATH_LENGTH
+	int "Buffer size for the path string"
+	default 20
+
+config FILE_READ_BUFFER_SIZE
+	int "Maximum file size that can be read from SD card."
+	default 200
+
+
+endif # FS_MODULE
+
+module = FS_MODULE
+module-str = fs module
+source "subsys/logging/Kconfig.template.log_config"

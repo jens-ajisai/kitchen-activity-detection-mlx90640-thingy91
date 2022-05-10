@@ -1,0 +1,48 @@
+menuconfig BLE_MODULE
+	bool "Bluetooth module"
+
+if BLE_MODULE
+
+config BLE_THREAD_STACK_SIZE
+	int "Bluetooth module thread stack size"
+	default 1536
+
+config BLE_EVENTS_LOG
+	bool "Enable logging for Bluetooth module events"
+	default y
+
+config BLE_LBS_SECURITY_ENABLED
+	bool "Enable security"
+	default y
+	select BT_SMP
+	select BT_SETTINGS
+	select FLASH
+	select FLASH_PAGE_LAYOUT
+	select FLASH_MAP
+	select NVS
+	select SETTINGS
+	help
+	  "Enable BLE security for the LED-Button service"
+
+config BLE_ENABLE_CAMERA_SERVICE
+	bool "Enable and include the camera service."
+
+config BLE_ENABLE_HEATY_SERVICE
+	bool "Enable and include the serial service."
+
+config BLE_ENABLE_TIME_SERVICE
+	bool "Enable and include the serial service."
+
+# https://docs.zephyrproject.org/latest/guides/build/kconfig/tips.html
+#   A common misunderstanding related to if is to think that the following code conditionally includes the file Kconfig.other:
+#   in reality, there are no conditional includes in Kconfig. if has no special meaning around a source.
+# if BLE_ENABLE_CAMERA_SERVICE
+rsource "../camera/Kconfig.camera_module"
+# endif # BLE_ENABLE_CAMERA_SERVICE
+
+
+endif # BLE_MODULE
+
+module = BLE_MODULE
+module-str = Bluetooth module
+source "subsys/logging/Kconfig.template.log_config"

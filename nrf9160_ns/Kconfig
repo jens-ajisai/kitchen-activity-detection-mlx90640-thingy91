@@ -1,0 +1,19 @@
+#
+# Copyright (c) 2020 Nordic Semiconductor ASA
+#
+# SPDX-License-Identifier: LicenseRef-Nordic-5-Clause
+#
+
+rsource "../modules/Kconfig.myModules"
+
+rsource "src/sensors/Kconfig.sensors_module"
+rsource "src/analysis/Kconfig.analysis_module"
+
+
+menu "Zephyr Kernel"
+source "Kconfig.zephyr"
+endmenu
+
+module = HEATY
+module-str = Heaty nrf9160
+source "${ZEPHYR_BASE}/subsys/logging/Kconfig.template.log_config"

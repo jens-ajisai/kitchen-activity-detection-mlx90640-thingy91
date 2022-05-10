@@ -1,0 +1,8 @@
+adafruit-io
+bleak
+memfault-cli
+paho-mqtt
+Pillow
+plantuml
+pyserial
+west

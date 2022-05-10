@@ -1,0 +1,30 @@
+@startuml
+
+
+state init : onEnter: init flutterBlue and fire evInitialized
+state idle : onEnter: read connected devices
+state scanning : onEnter: start scanning until the target device is found.\nthen fire evFoundTarget
+state connecting : onEnter: connect to device and fire evConnected on success
+state connected : onEnter: when services null, fire evDiscover
+state discovering : onEnter: discover services and register for sensor reading notifications\nCallbacks parse the JSON and decode the sensor data\nfire evDiscovered
+
+[*] -> init
+init -> init : evReinit[resetAll]
+init -down-> idle : evInitialized
+idle -down-> scanning : evScan
+scanning -> idle : evFoundTarget
+idle -> connecting : evConnect
+scanning -> connecting : evConnect
+connecting -> connected : evConnected
+connected -> discovering : evDiscover
+discovering -> connected : evDiscovered
+connected -> idle : evDisconnected[resetAll]
+discovering -> idle : evDisconnect[resetAll]
+connecting -> idle : evDisconnect[resetAll]
+connected -> idle : evDisconnect[resetAll]
+
+state "The following events can be fired by buttons" : "evConnect, evDisconnect, evScan"
+state "When sensor data is received" : "The Ui will be updated"
+state "Changing the interval slider" : "Will write the BLE characteristic for the sensor interval"
+
+@enduml

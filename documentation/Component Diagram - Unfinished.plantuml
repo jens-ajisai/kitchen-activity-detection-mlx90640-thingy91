@@ -1,0 +1,79 @@
+@startuml
+node Thingy91 {
+package nRF52840 as nrf52840 {
+  component "USB CDC" as nRF52840_usb
+  component "BLE" as nRF52840_ble
+  component "OTA" as nRF52840_ota
+  component "Shell" as nRF52840_shell
+  component "Diag" as nRF52840_diag
+  component "Sensors" as nRF52840_sensors
+  component "MLX90640" as nRF52840_mlx90640
+  component "Communication Bridge" as nRF52840_comm
+}
+
+
+nRF52840_usb -left-> nRF52840_comm
+nRF52840_usb -down-> nRF52840_shell
+nRF52840_ble -left-> nRF52840_comm
+nRF52840_ble -left-> nRF52840_ota
+nRF52840_diag -> nRF52840_comm
+nRF52840_sensors -up-> nRF52840_comm
+nRF52840_mlx90640 -up-> nRF52840_sensors
+
+package nRF9160 as nrf9160 {
+  component "MQTT" as nrf9160_mqtt
+  component "Analysis" as nrf9160_analysis
+  component "LTE" as nrf9160_lte
+  component "Shell" as nrf9160_shell
+  component "Diag" as nrf9160_diag
+  component "Sensors" as nrf9160_sensors
+  component "Sensor (CAF)" as nrf9160_sensor
+  component "LED (CAF)" as nrf9160_led
+  component "Communication Bridge" as nrf9160_comm
+}
+}
+
+nrf9160_comm -left-> nrf9160_analysis
+nrf9160_diag -down-> nrf9160_led
+nrf9160_analysis -up-> nrf9160_lte
+nrf9160_sensor -up-> nrf9160_sensors
+nrf9160_sensors -up-> nrf9160_analysis
+nrf9160_analysis -left-> nrf9160_mqtt
+nrf9160_mqtt -up-> nrf9160_lte
+nrf9160_diag -up-> nrf9160_lte
+nrf9160_comm -down-> nrf9160_shell
+
+nRF52840_comm -left-> nrf9160_comm : "Json via UART"
+
+node Mobile {
+interface "Homekit App" as homekit
+interface "Companion BLE App" as companion
+}
+
+node MLX90640 {
+  interface "MLX90640" as mlx90640
+}
+
+node "Development PC" {
+  interface "Serial Console" as serial
+  interface "Mcumgr" as mcumgr
+}
+
+node Cloud {
+interface "Edge Impulse" as edge_impulse
+interface "MQTT Server" as mqtt_server
+interface "Homebridge" as homebridge
+interface "Memfault" as memfault
+}
+
+
+nRF52840_ble -up-> companion : BLE
+mcumgr -up-> nRF52840_ble : BLE
+serial -up-> nRF52840_usb : USB
+mlx90640 -up-> nRF52840_mlx90640 : I2C
+nrf9160_lte -up-> memfault
+nrf9160_lte -up-> mqtt_server
+nrf9160_lte -up-> edge_impulse
+mqtt_server -up-> homebridge
+homebridge -up-> homekit
+@enduml
