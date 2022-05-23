@@ -79,6 +79,8 @@ lodepng source code. Don't forget to remove "static" if you copypaste them
 from here.*/
 
 #ifdef LODEPNG_COMPILE_ALLOCATORS
+// modification of the original code: Add this line to prevent unintented compilations
+DO NOT COMPILE ALLOCATORS FOR THIS PROJECT. ERROR!
 static void* lodepng_malloc(size_t size) {
 #ifdef LODEPNG_MAX_ALLOC
   if(size > LODEPNG_MAX_ALLOC) return 0;

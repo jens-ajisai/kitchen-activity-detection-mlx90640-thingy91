@@ -36,7 +36,7 @@ void enable_usb_console() {
     uart_line_ctrl_get(dev, UART_LINE_CTRL_DTR, &dtr);
     /* Give CPU resources to low priority threads. */
     k_sleep(K_MSEC(100));
-	// TODO replace with the CAF Led module?
+	// CAF LED module not yet available at this point of time
     blink(100);
   }
 #endif

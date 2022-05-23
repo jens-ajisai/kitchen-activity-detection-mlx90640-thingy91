@@ -134,6 +134,7 @@ void main(void) {
     sendReady();
 #endif
   }
-
+#ifdef CONFIG_WATCHDOG
   init_and_start_watchdog();
+#endif
 }

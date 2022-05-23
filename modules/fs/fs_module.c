@@ -1,9 +1,10 @@
 /*
- * The module architecture (using states, message queue in a separate thread, using events for communication)
- * is based on the Application Event Manager as used in the Asset Tracker v2 Application which has the below license.
+ * The module architecture (using states, message queue in a separate thread, using events for
+ * communication) is based on the Application Event Manager as used in the Asset Tracker v2
+ * Application which has the below license.
  * https://developer.nordicsemi.com/nRF_Connect_SDK/doc/latest/nrf/libraries/others/app_event_manager.html#app-event-manager
  * https://developer.nordicsemi.com/nRF_Connect_SDK/doc/latest/nrf/applications/asset_tracker_v2/README.html
- * 
+ *
  * Copyright (c) 2021 Nordic Semiconductor ASA
  *
  * SPDX-License-Identifier: LicenseRef-Nordic-5-Clause
@@ -22,7 +23,6 @@
 #include "common/modules_common.h"
 #include "fs/fs_module_event.h"
 #include "fs_impl.h"
-
 #include "utils.h"
 
 LOG_MODULE_REGISTER(fs_module, CONFIG_FS_MODULE_LOG_LEVEL);
@@ -33,7 +33,7 @@ struct fs_msg_data {
     struct fs_data_module_event fs_data;
     struct module_state_event module_state;
   } module;
-  struct event_dyndata *dyndata;  
+  struct event_dyndata* dyndata;
 };
 
 /* Diag module message queue. */
@@ -77,10 +77,11 @@ static bool event_handler(const struct event_header* eh) {
   }
 
   if (is_fs_data_module_event(eh)) {
-    struct fs_data_module_event *event = cast_fs_data_module_event(eh);
-    msg.dyndata = my_malloc(sizeof(struct event_dyndata) + event->dyndata.size, HEAP_MEMORY_STATISTICS_ID_MSG_DYNDATA);
+    struct fs_data_module_event* event = cast_fs_data_module_event(eh);
+    msg.dyndata = my_malloc(sizeof(struct event_dyndata) + event->dyndata.size,
+                            HEAP_MEMORY_STATISTICS_ID_MSG_DYNDATA);
     memcpy(msg.dyndata, &event->dyndata, sizeof(struct event_dyndata) + event->dyndata.size);
-  }  
+  }
 
   ENQUEUE_MSG(fs, FS)
 
@@ -103,6 +104,7 @@ void init_fs_module() {
 static void on_state_init(struct fs_msg_data* msg) {
   if (msg->module.module_state.module_id == MODULE_ID(main) &&
       msg->module.module_state.state == MODULE_STATE_READY) {
+    LOG_DBG("  *** Initialize SD Card ***");
     init_fs_module();
   }
 }
@@ -115,6 +117,7 @@ static void on_state_ready(struct fs_msg_data* msg) {
     int err = fs_helper_file_read(msg->module.fs_data.file_path, buf, &bytes_read);
     if (err) {
       SEND_ERROR(fs, FS_EVT_ERROR, err);
+      state_set(STATE_ERROR);
     }
 
     struct fs_data_module_event* event = new_fs_data_module_event(CONFIG_FILE_READ_BUFFER_SIZE);
@@ -127,11 +130,12 @@ static void on_state_ready(struct fs_msg_data* msg) {
   }
 
   if ((IS_EVENT(msg, fs_data, FS_EVT_WRITE_FILE)) || (IS_EVENT(msg, fs_data, FS_EVT_APPEND_FILE))) {
-    int err = fs_helper_file_write(
-        msg->module.fs_data.file_path, msg->dyndata->data,
-        msg->dyndata->size, (msg->module.fs_data.type == FS_EVT_APPEND_FILE));
+    int err =
+        fs_helper_file_write(msg->module.fs_data.file_path, msg->dyndata->data, msg->dyndata->size,
+                             (msg->module.fs_data.type == FS_EVT_APPEND_FILE));
     if (err) {
       SEND_ERROR(fs, FS_EVT_ERROR, err);
+      state_set(STATE_ERROR);
     }
   }
 
@@ -139,11 +143,18 @@ static void on_state_ready(struct fs_msg_data* msg) {
     int err = fs_helper_file_delete(msg->module.fs_data.file_path);
     if (err) {
       SEND_ERROR(fs, FS_EVT_ERROR, err);
+      state_set(STATE_ERROR);       
     }
   }
 }
 
-static void on_all_states(struct fs_msg_data *msg) {
+static void on_state_error(struct fs_msg_data* msg) {
+  if (IS_EVENT(msg, fs, FS_EVT_ERROR)) {
+    init_fs_module();
+  }
+}
+
+static void on_all_states(struct fs_msg_data* msg) {
   if (msg->dyndata) {
     my_free(msg->dyndata);
   }
@@ -165,6 +176,9 @@ static void module_thread_fn(void) {
         break;
       case STATE_READY:
         on_state_ready(&msg);
+        break;
+      case STATE_ERROR:
+        on_state_error(&msg);
         break;
       default:
         LOG_WRN("Unknown state");

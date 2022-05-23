@@ -9,8 +9,19 @@ config MEMFAULT_DEVICE_ID
 	string "Device ID used for memfault"
 	default "N/A"	
 
-config HEAP_MEMORY_STATISTICS
+menuconfig HEAP_MEMORY_STATISTICS
 	bool "Add hooks to track allocated memory by my_malloc and my_free. Otherwise map to k_*"
+
+if HEAP_MEMORY_STATISTICS
+
+config HEAP_MEMORY_STATISTICS_THREAD
+	bool "Periodically check for memory allocations"
+
+config HEAP_MEMORY_STATISTICS_THREAD_TIMEOUT
+	int "Check every x seconds for memory allocation"
+	default 60
+
+endif # HEAP_MEMORY_STATISTICS
 
 module = MEMORY_STAT
 module-str = memory statistics

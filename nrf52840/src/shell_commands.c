@@ -35,7 +35,6 @@ static int memfault_some_tests(const struct shell *shell, size_t argc, char **ar
   ARG_UNUSED(argc);
   ARG_UNUSED(argv);
 
-
   memfault_metrics_heartbeat_set_unsigned(MEMFAULT_METRICS_KEY(testMetric), 462);
   memfault_metrics_heartbeat_debug_trigger();
 
@@ -140,8 +139,23 @@ static int test_memory_stats(const struct shell *shell, size_t argc, char **argv
 }
 #endif
 
+#include <sys/reboot.h>
+static int reboot(const struct shell *shell, size_t argc, char **argv) {
+  sys_reboot(SYS_REBOOT_COLD);
+}
+
+#include "mcu_exchange/mcu_exchange_module_event.h"
+static int mock_error(const struct shell *shell, size_t argc, char **argv) {
+  struct mcu_exchange_module_event *event = new_mcu_exchange_module_event(0);
+  event->type = MCU_EXCHANGE_EVT_ERROR;
+  event->received = false;
+  EVENT_SUBMIT(event);
+}
+
 SHELL_STATIC_SUBCMD_SET_CREATE(
-    sub_appCtrl, SHELL_CMD(echo, NULL, "Echo back the arguments", echo),
+    sub_appCtrl, SHELL_CMD(echo, NULL, "Echo back t+he arguments", echo),
+    SHELL_CMD(reboot, NULL, "System cold reboot", reboot),
+    SHELL_CMD(mock_error, NULL, "Send MCU_EXCHANGE_EVT_ERROR", mock_error),
 #ifdef CONFIG_MEMFAULT
     SHELL_CMD(memfault_retrieve_data, NULL, "Retrieve and log the memfault data",
               memfault_retrieve_data),
@@ -151,7 +165,7 @@ SHELL_STATIC_SUBCMD_SET_CREATE(
     SHELL_CMD(module_state_ready, NULL, "Log hello", module_state_ready),
     SHELL_CMD(sensors_mockReading_mlx90640, NULL, "Send mock reading",
               sensors_mockReading_mlx90640),
-#ifdef CONFIG_HEAP_MEMORY_STATISTICS              
+#ifdef CONFIG_HEAP_MEMORY_STATISTICS
     SHELL_CMD(get_memory_stats, NULL, "Get allocation leftovers", get_memory_stats),
     SHELL_CMD(test_memory_stats, NULL, "Get allocation leftovers", test_memory_stats),
 #endif

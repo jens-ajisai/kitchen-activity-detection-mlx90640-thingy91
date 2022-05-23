@@ -19,10 +19,21 @@ LOG_MODULE_REGISTER(time_service, CONFIG_BLE_MODULE_LOG_LEVEL);
 static struct time_service_cb time_service_cb;
 
 static ssize_t write_set_time(struct bt_conn *conn, const struct bt_gatt_attr *attr,
-                                  const void *buf, uint16_t len, uint16_t offset, uint8_t flags) {
+                              const void *buf, uint16_t len, uint16_t offset, uint8_t flags) {
   if (time_service_cb.set_time_cb) {
-    int64_t val = *((int64_t *)buf);
-    time_service_cb.set_time_cb(val);
+    if (len == sizeof(int64_t)) {
+      uint8_t *buf8 = (uint8_t *)buf;
+
+      time_t val = 0;
+      for (int i = 7; i > 0; i--) {
+        val += buf8[i];
+        val <<= 8;
+      }
+      val += buf8[0];
+      time_service_cb.set_time_cb(val);
+    } else {
+      LOG_WRN("Received %s bytes for set time. Need 8 bytes", len);
+    }
   }
   return len;
 }
@@ -30,7 +41,8 @@ static ssize_t write_set_time(struct bt_conn *conn, const struct bt_gatt_attr *a
 int64_t time_default = 0;
 BT_GATT_SERVICE_DEFINE(time_service, BT_GATT_PRIMARY_SERVICE(BT_UUID_SERVICE_TIME),
                        BT_GATT_CHARACTERISTIC(BT_UUID_SET_TIME,
-                                              BT_GATT_CHRC_READ | BT_GATT_CHRC_WRITE | BT_GATT_CHRC_WRITE_WITHOUT_RESP,
+                                              BT_GATT_CHRC_READ | BT_GATT_CHRC_WRITE |
+                                                  BT_GATT_CHRC_WRITE_WITHOUT_RESP,
                                               BT_GATT_PERM_READ | BT_GATT_PERM_WRITE, NULL,
                                               write_set_time, &time_default), );
 

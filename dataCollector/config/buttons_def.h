@@ -22,7 +22,9 @@ const struct {
 static const struct gpio_pin col[] = {};
 
 #define DT_PORT_BY_PH(phandle) DT_CAT(phandle, _P_port)
-#define DT_GPIO_PORT(node_id, gpio_pha) DT_PORT_BY_PH(DT_PHANDLE_BY_IDX(node_id, gpio_pha, 0))
+
+#define DT_GPIO_PORT(node_id, gpio_pha) \
+	DT_PORT_BY_PH(DT_PHANDLE_BY_IDX(node_id, gpio_pha, 0))
 
 // Document .port
 // for the nrf52840 maybe it is the Boot button P1.13?

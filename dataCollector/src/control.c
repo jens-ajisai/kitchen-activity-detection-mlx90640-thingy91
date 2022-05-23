@@ -11,6 +11,9 @@
 #ifdef CONFIG_FS_MODULE
 #include "fs/fs_module_event.h"
 #endif
+#ifdef CONFIG_CAF_BUTTONS
+#include <caf/events/button_event.h>
+#endif
 #include "sensors/sensors_module_event.h"
 #include "util_settings.h"
 
@@ -70,6 +73,10 @@ static bool handle_bt_module_event(const struct bt_module_event* event) {
   if (event->type == BT_EVT_SET_ARDUCAM_CAM_INTERVAL) {
     SEND_VAL(camera, CAMERA_EVT_SET_ARDUCAM_CAM_INTERVAL, event->data.val);
   }
+  return false;
+}
+#else
+static bool handle_bt_module_event(const struct bt_module_event* event) {
   return false;
 }
 #endif
@@ -182,10 +189,38 @@ static bool handle_sensors_data_module_event(const struct sensors_data_module_ev
   return false;
 }
 
+#ifdef CONFIG_CAF_BUTTONS
+enum button_id { BUTTON_ID_0, BUTTON_ID_COUNT };
+
+static bool handle_button_event(const struct button_event* evt) {
+  LOG_DBG("button_event pressed:%d, key_id:%d", evt->pressed, evt->key_id);
+  if (evt->pressed) {
+    switch (evt->key_id) {
+      case BUTTON_ID_0:
+        SEND_EVENT(bt, BT_EVT_TOGGLE_ADVERTISING);
+        break;
+      default:
+        break;
+    }
+  } else {
+    switch (evt->key_id) {
+      case BUTTON_ID_0:
+        break;
+      default:
+        break;
+    }
+  }
+
+  return false;
+}
+#endif
+
 static bool event_handler(const struct event_header* eh) {
+#ifdef CONFIG_BLE_ENABLE_CAMERA_SERVICE
   if (is_camera_module_data_event(eh)) {
     return handle_camera_module_data_event(cast_camera_module_data_event(eh));
   }
+#endif
 
   if (is_bt_module_event(eh)) {
     return handle_bt_module_event(cast_bt_module_event(eh));
@@ -195,11 +230,22 @@ static bool event_handler(const struct event_header* eh) {
     return handle_sensors_data_module_event(cast_sensors_data_module_event(eh));
   }
 
+#ifdef CONFIG_CAF_BUTTONS
+  if (is_button_event(eh)) {
+    return handle_button_event(cast_button_event(eh));
+  }
+#endif
+
   LOG_WRN("unhandled event.");
   return false;
 }
 
 EVENT_LISTENER(MODULE, event_handler);
+#ifdef CONFIG_BLE_ENABLE_CAMERA_SERVICE
 EVENT_SUBSCRIBE(MODULE, camera_module_data_event);
+#endif
 EVENT_SUBSCRIBE(MODULE, bt_module_event);
 EVENT_SUBSCRIBE(MODULE, sensors_data_module_event);
+#ifdef CONFIG_CAF_BUTTONS
+EVENT_SUBSCRIBE(MODULE, button_event);
+#endif

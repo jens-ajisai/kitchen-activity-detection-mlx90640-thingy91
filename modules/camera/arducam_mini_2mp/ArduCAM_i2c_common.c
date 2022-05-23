@@ -43,8 +43,6 @@ void arducam_initCam()
     arducam_wrSensorReg8_8(0xff, 0x01);
     arducam_wrSensorReg8_8(0x15, 0x00);
     arducam_wrSensorRegs8_8(OV2640_320x240_JPEG);
-    //wrSensorReg8_8(0xff, 0x00);
-    //wrSensorReg8_8(0x44, 0x32);
     k_sleep(K_MSEC(WAIT_FOR_CAMERA_TIME));
 }
 

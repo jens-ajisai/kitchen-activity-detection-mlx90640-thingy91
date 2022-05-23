@@ -32,6 +32,12 @@ class FindDevicesScreen extends StatelessWidget {
                       }),
                   MaterialButton(
                       color: Colors.lightBlueAccent,
+                      child: Text("Set Time"),
+                      onPressed: () {
+                        Provider.of<BleStatemachine>(context, listen: false).setTime();
+                      }),
+                  MaterialButton(
+                      color: Colors.lightBlueAccent,
                       child: Text("Disconnect"),
                       onPressed: () {
                         Events.eventHandler.add(Events.evDisconnect);

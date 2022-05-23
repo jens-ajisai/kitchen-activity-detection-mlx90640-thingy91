@@ -1,7 +1,7 @@
 /*
  * This code took partly the Adafruit mlx90640-library as a reference which has the below license
  * https://github.com/adafruit/Adafruit_MLX90640
- * 
+ *
  *  Apache License Version 2.0, January 2004
  */
 
@@ -15,8 +15,8 @@
 
 #include "MLX90640_API.h"
 #include "MLX90640_I2C_Driver.h"
-#include "sensor_mlx60940.h"
 #include "common/memory_hook.h"
+#include "sensor_mlx60940.h"
 LOG_MODULE_REGISTER(sensor_mlx60940, CONFIG_SENSORS_MODULE_LOG_LEVEL);
 
 static struct mlx60940_cb mlx60940_cb;
@@ -34,19 +34,20 @@ k_timeout_t heat_map_interval = K_SECONDS(CONFIG_HEAT_MAP_CYCLE);
 static paramsMLX90640 params;
 
 static void read_heat_map(struct k_work* work) {
-  float* heat_map = (float*)my_malloc(HEAT_MAP_DATA_SIZE, HEAP_MEMORY_STATISTICS_ID_SENSOR_HEATMAP_DATA);
-  LOG_DBG("Allocate %d bytes %p", HEAT_MAP_DATA_SIZE, heat_map);
-  if (heat_map == NULL) {
-    LOG_ERR("Failed to allocate memory for the heat map!");
-
-    return;
-  }
-  uint16_t size = HEAT_MAP_DATA_SIZE;
-
+  uint16_t heatMap_size = 0;
+  
   float emissivity = 0.95;
   float tr = 23.15;
   uint16_t mlx90640Frame[834];
   int status;
+
+  float* heat_map =
+      (float*)my_malloc(HEAT_MAP_DATA_SIZE, HEAP_MEMORY_STATISTICS_ID_SENSOR_HEATMAP_DATA);
+  LOG_DBG("Allocate %d bytes %p", HEAT_MAP_DATA_SIZE, heat_map);
+  if (heat_map == NULL) {
+    LOG_ERR("Failed to allocate memory for the heat map!");
+    goto end;
+  }
 
   for (uint8_t page = 0; page < 2; page++) {
     status = MLX90640_GetFrameData(MLX90640_I2CADDR, mlx90640Frame);
@@ -55,8 +56,7 @@ static void read_heat_map(struct k_work* work) {
       LOG_WRN("status is %d reading failed", status);
 
       LOG_DBG("Free %p", heat_map);
-      my_free(heat_map);
-      return;
+      goto end;
     }
 
     // For a MLX90640 in the open air the shift is -8 degC.
@@ -69,14 +69,17 @@ static void read_heat_map(struct k_work* work) {
 
   // logging large data without sleep crashes the app. Somewhere out of memory ...
   // LOG_HEXDUMP_DBG(heat_map, HEAT_MAP_DATA_SIZE, "heat_map: ");
+  heatMap_size = HEAT_MAP_DATA_SIZE;
 
+end:
   if (mlx60940_cb.notify_heatMap_cb) {
-    mlx60940_cb.notify_heatMap_cb(heat_map, size);
-  } else {
-
+    mlx60940_cb.notify_heatMap_cb(heat_map, heatMap_size);
   }
-  LOG_DBG("Free %p", heat_map);
-  my_free(heat_map);
+
+  if (heat_map) {
+    LOG_DBG("Free %p", heat_map);
+    my_free(heat_map);
+  }
   k_work_reschedule_for_queue(&mlx90640_work_q, &read_mlx90640_work, heat_map_interval);
 }
 

@@ -12,6 +12,10 @@ config SENSORS_EVENTS_LOG
 	bool "Enable logging for Cloud module events"
 	default y
 
+config SENSORS_HIGH_COLOR_INTENSITY_THRESHOLD
+	int "Definition of high color intensity to activate the Button event"
+	default 300
+
 endif # SENSORS91_MODULE
 
 module = SENSORS91_MODULE

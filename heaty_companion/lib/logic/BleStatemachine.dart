@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'dart:convert';
+import 'dart:ffi';
 import 'dart:typed_data';
 
 import 'package:flutter/material.dart' hide State;
@@ -69,6 +70,13 @@ class BleStatemachine with ChangeNotifier {
   final String cameraTxUuid = "caaf090b-c332-42a8-93bd-25e905756cb8";
   final String cameraIntervalUuid = "caaf090a-c332-42a8-93bd-25e905756cb8";
 
+  final String timeServiceUuid = "a00f0900-c332-42a8-93bd-25e905756cb8";
+  final String timeSetUuid = "a00f0901-c332-42a8-93bd-25e905756cb8";
+
+  final String shellServiceUuid = "caaf0900-c332-42a8-93bd-25e905756cb8";
+  final String shellRxUuid = "caaf090b-c332-42a8-93bd-25e905756cb8";
+  final String shellTxUuid = "caaf090b-c332-42a8-93bd-25e905756cb8";
+
   cancelSubscription(StreamSubscription? subscription) async {
     if (subscription != null) {
       await subscription.cancel();
@@ -76,14 +84,21 @@ class BleStatemachine with ChangeNotifier {
     }
   }
 
-  BluetoothCharacteristic getCharacteristic(
+  BluetoothCharacteristic? getCharacteristic(
       List<BluetoothService> services, String serviceID, String characteristicID) {
-    BluetoothService service = services.where((element) => element.uuid.toString() == serviceID).first;
-    BluetoothCharacteristic char = service.characteristics.where((cc) => cc.uuid.toString() == characteristicID).first;
-    logger.info("got characteristic" + char.toString());
-    targetServices.add(service);
-    targetCharacteristics.add(char);
-    return char;
+    try {
+      BluetoothService service = services.where((element) => element.uuid.toString() == serviceID).first;
+      BluetoothCharacteristic char =
+          service.characteristics.where((cc) => cc.uuid.toString() == characteristicID).first;
+      logger.info("got characteristic" + char.toString());
+      targetServices.add(service);
+      targetCharacteristics.add(char);
+      return char;
+    } on Exception catch (exception) {
+      return null;
+    } catch (error) {
+      return null;
+    }
   }
 
   Future<void> processHeatmapData() async {
@@ -186,15 +201,25 @@ class BleStatemachine with ChangeNotifier {
   double heatMapInterval = 10;
 
   setHeatMapInterval() {
-    BluetoothCharacteristic c = getCharacteristic(allServices, heatyServiceUuid, heatMapIntervalUuid);
-    c.write([heatMapInterval.toInt()]);
+    BluetoothCharacteristic? c = getCharacteristic(allServices, heatyServiceUuid, heatMapIntervalUuid);
+    c?.write([heatMapInterval.toInt()]);
   }
 
   double cameraImageInterval = 10;
 
   setCameraImageInterval() {
-    BluetoothCharacteristic c = getCharacteristic(allServices, cameraServiceUuid, cameraIntervalUuid);
-    c.write([heatMapInterval.toInt()]);
+    BluetoothCharacteristic? c = getCharacteristic(allServices, cameraServiceUuid, cameraIntervalUuid);
+    c?.write([heatMapInterval.toInt()]);
+  }
+
+  setTime() {
+    BluetoothCharacteristic? c = getCharacteristic(allServices, timeServiceUuid, timeSetUuid);
+    int timestamp = (DateTime.now().millisecondsSinceEpoch / 1000).floor();
+    Int64List timestamp64 = Int64List.fromList([timestamp]);
+    ByteBuffer byteBuffer = timestamp64.buffer;
+    logger.info(
+        "timestamp=$timestamp, timestamp64=$timestamp64, byteBuffer=$byteBuffer, send=${byteBuffer.asUint8List()}");
+    c?.write(byteBuffer.asUint8List());
   }
 
   //-------------------------------------
@@ -326,16 +351,16 @@ class BleStatemachine with ChangeNotifier {
           }
 
           allServices = await targetDevice!.discoverServices();
-          BluetoothCharacteristic heatMapTxCharacteristic =
+          BluetoothCharacteristic? heatMapTxCharacteristic =
               getCharacteristic(allServices, heatyServiceUuid, heatMapTxUuid);
-          await heatMapTxCharacteristic.setNotifyValue(true);
-          heatMapTxSubscription = heatMapTxCharacteristic.value.listen((value) async {
+          await heatMapTxCharacteristic?.setNotifyValue(true);
+          heatMapTxSubscription = heatMapTxCharacteristic?.value.listen((value) async {
             handleHeatMapTx(value); // *** automatically subscribe for data!
           });
-          BluetoothCharacteristic cameraImageTxCharacteristic =
+          BluetoothCharacteristic? cameraImageTxCharacteristic =
               getCharacteristic(allServices, cameraServiceUuid, cameraTxUuid);
-          await cameraImageTxCharacteristic.setNotifyValue(true);
-          cameraImageTxSubscription = cameraImageTxCharacteristic.value.listen((value) async {
+          await cameraImageTxCharacteristic?.setNotifyValue(true);
+          cameraImageTxSubscription = cameraImageTxCharacteristic?.value.listen((value) async {
             handleCameraImageTx(value); // *** automatically subscribe for data!
           });
           Events.eventHandler.add(Events.evDiscovered);

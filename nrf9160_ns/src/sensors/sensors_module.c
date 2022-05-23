@@ -1,9 +1,10 @@
 /*
- * The module architecture (using states, message queue in a separate thread, using events for communication)
- * is based on the Application Event Manager as used in the Asset Tracker v2 Application which has the below license.
+ * The module architecture (using states, message queue in a separate thread, using events for
+ * communication) is based on the Application Event Manager as used in the Asset Tracker v2
+ * Application which has the below license.
  * https://developer.nordicsemi.com/nRF_Connect_SDK/doc/latest/nrf/libraries/others/app_event_manager.html#app-event-manager
  * https://developer.nordicsemi.com/nRF_Connect_SDK/doc/latest/nrf/applications/asset_tracker_v2/README.html
- * 
+ *
  * Copyright (c) 2021 Nordic Semiconductor ASA
  *
  * SPDX-License-Identifier: LicenseRef-Nordic-5-Clause
@@ -18,6 +19,7 @@
 #include <zephyr.h>
 
 #include "../sensors/sensors_module_event.h"
+#include "mcu_exchange/mcu_exchange_module_event.h"
 #include "common/modules_common.h"
 #include "sensors_ids.h"
 
@@ -78,6 +80,21 @@ static bool handle_sensor_event(const struct sensor_event* event) {
     if (sensor_event_get_data_cnt(event) == 4) {
       LOG_DBG("%s, %f, %f, %f, %f", event->descr, data_ptr[0], data_ptr[1], data_ptr[2],
               data_ptr[3]);
+    }
+  }
+
+  else if (strcmp(event->descr, "color") == 0) {
+    float* data_ptr = sensor_event_get_data_ptr(event);
+
+    if (sensor_event_get_data_cnt(event) == 4) {
+      LOG_DBG("%s, %f, %f, %f, %f", event->descr, data_ptr[0], data_ptr[1], data_ptr[2],
+              data_ptr[3]);
+      if ((data_ptr[0] + data_ptr[1] + data_ptr[2]) > CONFIG_SENSORS_HIGH_COLOR_INTENSITY_THRESHOLD) {
+        // start advertising BLE on high color intensity
+        struct mcu_exchange_module_event* event = new_mcu_exchange_module_event(0);
+        event->type = MCU_EXCHANGE_EVT_BUTTON;
+        EVENT_SUBMIT(event);
+      }
     }
   }
 

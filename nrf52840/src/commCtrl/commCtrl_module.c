@@ -23,12 +23,12 @@
 #include <sys/base64.h>
 #include <zephyr.h>
 
-#include "common/memory_hook.h"
-#include "bt/bt_module_event.h"
 #include "../commCtrl/commCtrl_module_event.h"
-#include "sensors/sensors_module_event.h"
-#include "mcu_exchange/mcu_exchange_module_event.h"
+#include "bt/bt_module_event.h"
+#include "common/memory_hook.h"
 #include "common/modules_common.h"
+#include "mcu_exchange/mcu_exchange_module_event.h"
+#include "sensors/sensors_module_event.h"
 #include "utils.h"
 
 LOG_MODULE_REGISTER(commCtrl_module, CONFIG_COMMCTRL_MODULE_LOG_LEVEL);
@@ -38,6 +38,7 @@ struct commCtrl_msg_data {
     struct module_state_event module_state;
     struct sensors_module_event sensors;
     struct sensors_data_module_event sensors_data;
+    struct mcu_exchange_module_event mcu_exchange;
     struct bt_module_event bt;
     struct commCtrl_module_event commCtrl;
   } module;
@@ -78,6 +79,7 @@ static bool event_handler(const struct event_header *eh) {
   TRANSLATE_EVENT_TO_MSG(bt_module, bt)
   TRANSLATE_EVENT_TO_MSG(sensors_module, sensors)
   TRANSLATE_EVENT_TO_MSG(sensors_data_module, sensors_data)
+  TRANSLATE_EVENT_TO_MSG(mcu_exchange_module, mcu_exchange)
 
   if (is_module_state_event(eh)) {
     struct module_state_event *event = cast_module_state_event(eh);
@@ -87,7 +89,8 @@ static bool event_handler(const struct event_header *eh) {
 
   if (is_sensors_data_module_event(eh)) {
     struct sensors_data_module_event *event = cast_sensors_data_module_event(eh);
-    msg.dyndata = my_malloc(sizeof(struct event_dyndata) + event->dyndata.size, HEAP_MEMORY_STATISTICS_ID_MSG_DYNDATA);
+    msg.dyndata = my_malloc(sizeof(struct event_dyndata) + event->dyndata.size,
+                            HEAP_MEMORY_STATISTICS_ID_MSG_DYNDATA);
     memcpy(msg.dyndata, &event->dyndata, sizeof(struct event_dyndata) + event->dyndata.size);
   }
 
@@ -101,6 +104,9 @@ static void init_module() { state_set(STATE_READY); }
 static void on_state_init(struct commCtrl_msg_data *msg) {
   if (msg->module.module_state.module_id == MODULE_ID(main) &&
       msg->module.module_state.state == MODULE_STATE_READY) {
+    // workaround: Sending errors before UART line of mcu exchange is ready drops the message
+    // TODO: establish correct startup sequence, but take modularity and dependencies into account
+    k_sleep(K_SECONDS(1));
     init_module();
   }
 }
@@ -109,6 +115,7 @@ static void sendToNrf9160(uint8_t *data, uint16_t size, enum mcu_exchange_module
   if (size > 0) {
     struct mcu_exchange_module_event *event = new_mcu_exchange_module_event(size);
     event->type = type;
+    event->received = false;
     event->dyndata.size = size;
     memcpy(event->dyndata.data, data, size);
     EVENT_SUBMIT(event);
@@ -117,7 +124,7 @@ static void sendToNrf9160(uint8_t *data, uint16_t size, enum mcu_exchange_module
 
 static void sendToBle(uint8_t *data, uint16_t len) {
   {
-    struct bt_data_module_event* bt_event = new_bt_data_module_event(len);
+    struct bt_data_module_event *bt_event = new_bt_data_module_event(len);
     bt_event->type = BT_EVT_HEATMAP_SEND;
     bt_event->dyndata.size = len;
     memcpy(bt_event->dyndata.data, data, len);
@@ -125,7 +132,7 @@ static void sendToBle(uint8_t *data, uint16_t len) {
     EVENT_SUBMIT(bt_event);
   }
   {
-    struct bt_data_module_event* bt_event = new_bt_data_module_event(1);
+    struct bt_data_module_event *bt_event = new_bt_data_module_event(1);
     bt_event->type = BT_EVT_HEATMAP_SEND;
     bt_event->dyndata.size = 1;
     memset(bt_event->dyndata.data, 0, 1);
@@ -154,20 +161,28 @@ static void prepareAndSendHeatmap(uint8_t *data, uint16_t len, int64_t timestamp
 
 static void on_ready_state(struct commCtrl_msg_data *msg) {
   if (IS_EVENT(msg, sensors_data, SENSORS_EVT_HEAT_MAP_DATA_READY)) {
-    prepareAndSendHeatmap(msg->dyndata->data,
-                          msg->dyndata->size,
-                          msg->module.sensors_data.timestamp,
-                          msg->module.sensors_data.sensorsId);
-
+    prepareAndSendHeatmap(msg->dyndata->data, msg->dyndata->size,
+                          msg->module.sensors_data.timestamp, msg->module.sensors_data.sensorsId);
   }
-#ifdef CONFIG_BLE_ENABLE_HEATY_SERVICE  
-   else if (IS_EVENT(msg, bt, BT_EVT_SET_HEATMAP_INTERVAL)) {
+  if (IS_EVENT(msg, mcu_exchange, MCU_EXCHANGE_EVT_BUTTON)) {
+    SEND_EVENT(bt, BT_EVT_TOGGLE_ADVERTISING);
+  }
+#ifdef CONFIG_BLE_ENABLE_HEATY_SERVICE
+  else if (IS_EVENT(msg, bt, BT_EVT_SET_HEATMAP_INTERVAL)) {
     SEND_VAL(sensors, SENSORS_EVT_SET_INTERVAL, msg->module.bt.data.val);
   }
 #endif
 }
 
 static void on_all_states(struct commCtrl_msg_data *msg) {
+  if (IS_EVENT(msg, commCtrl, COMMCTRL_EVT_ERROR) || IS_EVENT(msg, bt, BT_EVT_ERROR) ||
+      IS_EVENT(msg, sensors, SENSORS_EVT_ERROR)) {
+    struct mcu_exchange_module_event *event = new_mcu_exchange_module_event(0);
+    event->type = MCU_EXCHANGE_EVT_ERROR;
+    event->received = false;
+    EVENT_SUBMIT(event);
+  }
+
   if (msg->dyndata) {
     my_free(msg->dyndata);
   }
@@ -210,4 +225,4 @@ EVENT_SUBSCRIBE(MODULE, module_state_event);
 EVENT_SUBSCRIBE(MODULE, sensors_module_event);
 EVENT_SUBSCRIBE(MODULE, sensors_data_module_event);
 EVENT_SUBSCRIBE(MODULE, commCtrl_module_event);
-
+EVENT_SUBSCRIBE(MODULE, mcu_exchange_module_event);

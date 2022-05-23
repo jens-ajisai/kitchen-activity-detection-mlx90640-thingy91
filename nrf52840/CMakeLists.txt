@@ -5,6 +5,7 @@ set(BOARD thingy91_nrf52840)
 
 # If CONF_FILE is set then boards/${BOARD}.conf is not automatically merged anymore!
 # Therefore only use OVERLAY_CONFIG
+list(APPEND OVERLAY_CONFIG "overlay-credentials.conf")
 list(APPEND OVERLAY_CONFIG "overlay-debug.conf")
 list(APPEND OVERLAY_CONFIG "overlay-ble.conf")
 list(APPEND OVERLAY_CONFIG "overlay-dfu.conf")

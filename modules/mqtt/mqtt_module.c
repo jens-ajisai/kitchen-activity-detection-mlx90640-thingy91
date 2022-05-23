@@ -1,9 +1,10 @@
 /*
- * The module architecture (using states, message queue in a separate thread, using events for communication)
- * is based on the Application Event Manager as used in the Asset Tracker v2 Application which has the below license.
+ * The module architecture (using states, message queue in a separate thread, using events for
+ * communication) is based on the Application Event Manager as used in the Asset Tracker v2
+ * Application which has the below license.
  * https://developer.nordicsemi.com/nRF_Connect_SDK/doc/latest/nrf/libraries/others/app_event_manager.html#app-event-manager
  * https://developer.nordicsemi.com/nRF_Connect_SDK/doc/latest/nrf/applications/asset_tracker_v2/README.html
- * 
+ *
  * Copyright (c) 2021 Nordic Semiconductor ASA
  *
  * SPDX-License-Identifier: LicenseRef-Nordic-5-Clause
@@ -19,10 +20,10 @@
 #include <zephyr.h>
 
 #include "../adafruit_certificates.h"
-#include "mqtt/mqtt_module_event.h"
-#include "common/modules_common.h"
-#include "mqtt_client.h"
 #include "common/memory_hook.h"
+#include "common/modules_common.h"
+#include "mqtt/mqtt_module_event.h"
+#include "mqtt_client.h"
 
 LOG_MODULE_REGISTER(MODULE, CONFIG_MQTT_MODULE_LOG_LEVEL);
 
@@ -99,7 +100,7 @@ static struct mqtt_client_info client_info = {
     .password = CONFIG_MQTT_PASSWORD,
     .libtls = CONFIG_MQTT_LIB_TLS,
     .tlsSecTags = adafruit_tls_sec_tag,
-    .tlsSecTagsLen = sizeof(adafruit_tls_sec_tag)/sizeof(adafruit_tls_sec_tag[0]),
+    .tlsSecTagsLen = sizeof(adafruit_tls_sec_tag) / sizeof(adafruit_tls_sec_tag[0]),
     .peerVerify = CONFIG_MQTT_TLS_PEER_VERIFY,
     .sessionCaching = CONFIG_MQTT_TLS_SESSION_CACHING,
 };
@@ -147,6 +148,9 @@ static void on_state_init(struct mqtt_msg_data* msg) {
     }
   } else if ((IS_EVENT(msg, mqtt, MQTT_EVT_SUBSCRIBE)) || (IS_EVENT(msg, mqtt, MQTT_EVT_SEND))) {
     SEND_ERROR(mqtt, MQTT_EVT_ERROR, 99);
+    if (msg->module.mqtt.data.msg.message) {
+      my_free(msg->module.mqtt.data.msg.message);
+    }
   }
 }
 
@@ -154,13 +158,17 @@ static void on_state_connected(struct mqtt_msg_data* msg) {
   if (IS_EVENT(msg, mqtt, MQTT_EVT_SUBSCRIBE)) {
     mqtt_client_module_subscribe(&client, msg->module.mqtt.data.msg.topic);
   } else if (IS_EVENT(msg, mqtt, MQTT_EVT_SEND)) {
-    mqtt_client_module_data_publish(&client, msg->module.mqtt.data.msg.topic,
-                                    msg->module.mqtt.data.msg.message,
-                                    strlen(msg->module.mqtt.data.msg.message) + 1);
-    memfault_metrics_heartbeat_add(MEMFAULT_METRICS_KEY(MqttSendFrequency), 1);
-    // topic is a static string
-    // my_free(msg->module.mqtt.data.msg.topic);
-    my_free(msg->module.mqtt.data.msg.message);
+    if (!msg->module.mqtt.data.msg.message) {
+      LOG_ERR("mqtt message is NULL. Skip sending");
+    } else {
+      mqtt_client_module_data_publish(&client, msg->module.mqtt.data.msg.topic,
+                                      msg->module.mqtt.data.msg.message,
+                                      strlen(msg->module.mqtt.data.msg.message) + 1);
+      memfault_metrics_heartbeat_add(MEMFAULT_METRICS_KEY(MqttSendFrequency), 1);
+      // topic is a static string
+      // my_free(msg->module.mqtt.data.msg.topic);
+      my_free(msg->module.mqtt.data.msg.message);
+    }
   }
 }
 
@@ -172,6 +180,15 @@ static void on_state_disconnected(struct mqtt_msg_data* msg) {
   }
   if ((IS_EVENT(msg, mqtt, MQTT_EVT_SUBSCRIBE)) || (IS_EVENT(msg, mqtt, MQTT_EVT_SEND))) {
     SEND_ERROR(mqtt, MQTT_EVT_ERROR, 99);
+    if (msg->module.mqtt.data.msg.message) {
+      my_free(msg->module.mqtt.data.msg.message);
+    }
+  }
+}
+
+static void on_state_error(struct mqtt_msg_data* msg) {
+  if (msg->module.mqtt.data.msg.message) {
+    my_free(msg->module.mqtt.data.msg.message);
   }
 }
 
@@ -200,6 +217,7 @@ static void module_thread_fn(void) {
         on_state_disconnected(&msg);
         break;
       case STATE_ERROR:
+        on_state_error(&msg);
         break;
       default:
         LOG_WRN("Unknown mqtt module state.");

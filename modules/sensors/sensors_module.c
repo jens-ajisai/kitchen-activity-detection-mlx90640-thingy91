@@ -1,9 +1,10 @@
 /*
- * The module architecture (using states, message queue in a separate thread, using events for communication)
- * is based on the Application Event Manager as used in the Asset Tracker v2 Application which has the below license.
+ * The module architecture (using states, message queue in a separate thread, using events for
+ * communication) is based on the Application Event Manager as used in the Asset Tracker v2
+ * Application which has the below license.
  * https://developer.nordicsemi.com/nRF_Connect_SDK/doc/latest/nrf/libraries/others/app_event_manager.html#app-event-manager
  * https://developer.nordicsemi.com/nRF_Connect_SDK/doc/latest/nrf/applications/asset_tracker_v2/README.html
- * 
+ *
  * Copyright (c) 2021 Nordic Semiconductor ASA
  *
  * SPDX-License-Identifier: LicenseRef-Nordic-5-Clause
@@ -24,7 +25,6 @@
 #include "common/modules_common.h"
 #include "sensors/sensors_module_event.h"
 #include "sensors_ids.h"
-
 #include "util_settings.h"
 
 LOG_MODULE_REGISTER(MODULE, CONFIG_SENSORS_MODULE_LOG_LEVEL);
@@ -85,16 +85,20 @@ static bool event_handler(const struct event_header* eh) {
 #include "sensor_mlx60940.h"
 
 static void notify_heatMap_cb(float* heat_map, uint16_t size) {
-  LOG_INF("%f, %f, %f, %f, %f, %f, %f, %f", heat_map[3], heat_map[19], heat_map[78], heat_map[145],
-          heat_map[200], heat_map[345], heat_map[500], heat_map[720]);
+  if (size) {
+    LOG_INF("%f, %f, %f, %f, %f, %f, %f, %f", heat_map[3], heat_map[19], heat_map[78],
+            heat_map[145], heat_map[200], heat_map[345], heat_map[500], heat_map[720]);
 
-  struct sensors_data_module_event* event = new_sensors_data_module_event(size);
-  event->type = SENSORS_EVT_HEAT_MAP_DATA_READY;
-  event->timestamp = k_uptime_get();
-  event->sensorsId = SENSOR_HEAT_MAP;
-  memcpy(event->dyndata.data, heat_map, size);
-  event->dyndata.size = size;
-  EVENT_SUBMIT(event);
+    struct sensors_data_module_event* event = new_sensors_data_module_event(size);
+    event->type = SENSORS_EVT_HEAT_MAP_DATA_READY;
+    event->timestamp = k_uptime_get();
+    event->sensorsId = SENSOR_HEAT_MAP;
+    memcpy(event->dyndata.data, heat_map, size);
+    event->dyndata.size = size;
+    EVENT_SUBMIT(event);
+  } else {
+    SEND_ERROR(sensors, SENSORS_EVT_ERROR, -1);
+  }
 }
 
 static struct mlx60940_cb mlx60940_callbacs = {
@@ -111,6 +115,9 @@ static void init_module() {
 static void on_state_init(struct sensors_msg_data* msg) {
   if (msg->module.module_state.module_id == MODULE_ID(main) &&
       msg->module.module_state.state == MODULE_STATE_READY) {
+    // workaround: Sending errors before UART line of mcu exchange is ready drops the message
+    // TODO: establish correct startup sequence, but take modularity and dependencies into account
+    k_sleep(K_SECONDS(1));
     init_module();
     settings_util_init();
     state_set(STATE_READY);

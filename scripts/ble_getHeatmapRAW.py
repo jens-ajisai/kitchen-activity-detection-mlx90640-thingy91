@@ -2,6 +2,7 @@ import asyncio
 import logging
 import platform
 import sys
+import os
 
 from bleak import BleakScanner, BleakClient
 from bleak.backends.scanner import AdvertisementData
@@ -29,8 +30,8 @@ SENSOR_INTERVAL_UUID = "aaaf0902-c332-42a8-93bd-25e905756cb8"
 
 incommingData = ""
 
-aio = Client('__REPLACE_ME__MQTT_USER_NAME', '__REPLACE_ME__MQTT_USER_NAME')
-feedName = "agri.heatmap"
+aio = Client(os.environ.get('MQTT_USER_NAME'), os.environ.get('MQTT_CREDENTIALS'))
+feedName = os.environ.get('MQTT_FEED_NAME_HEATMAP')
 
 
 async def main():

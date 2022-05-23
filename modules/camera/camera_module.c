@@ -107,8 +107,16 @@ static void sendImageChunck(uint32_t imageSize, uint32_t remainingSize) {
     EVENT_SUBMIT(event);
 }
 
+static bool workaround_once = true;
+
 static void takeImage(struct k_work* work) {
   LOG_INF("take image");
+
+  if(workaround_once) {
+    arducam_mini_2mp_manual_whileBalance(127,127,127);
+    k_sleep(K_MSEC(WAIT_FOR_CAMERA_TIME));
+    workaround_once = false;
+  }
 
   uint32_t imageSize = arducam_mini_2mp_startSingleCapture();
   uint32_t remainingSize = imageSize;

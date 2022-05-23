@@ -46,4 +46,13 @@ void arducam_mini_2mp_onSpiInterrupt(uint32_t txBytes, uint32_t rxBytes);
 
 void arducam_mini_power_down_camera();
 
+void arducam_mini_2mp_low_reg_write(int regID, int regDat);
+uint8_t arducam_mini_2mp_low_reg_read(int regID);
+
+void arducam_mini_2mp_manual_exposure(uint32_t time_ms);
+void arducam_mini_2mp_manual_gain(int gain);
+void arducam_mini_2mp_manual_whileBalance(int a, int b, int c);
+void arducam_mini_2mp_log_whileBalance();
+void arducam_mini_2mp_set_ae_level(int level);
+
 #endif

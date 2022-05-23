@@ -39,6 +39,8 @@ static char* get_bt_evt_type_str(enum bt_module_event_type type) {
 #endif
     case BT_EVT_START_ADVERTISING:
       return "BT_EVT_START_ADVERTISING";
+    case BT_EVT_TOGGLE_ADVERTISING:
+      return "BT_EVT_TOGGLE_ADVERTISING";
     case BT_EVT_ERROR:
       return "BT_EVT_ERROR";
     default:

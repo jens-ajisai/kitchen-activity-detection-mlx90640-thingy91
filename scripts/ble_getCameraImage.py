@@ -18,8 +18,6 @@ import re
 import struct
 import io
 
-from Adafruit_IO import Client
-
 logger = logging.getLogger(__name__)
 
 
@@ -29,9 +27,6 @@ CAMERA_INTERVAL_UUID = "caaf090a-c332-42a8-93bd-25e905756cb8"
 
 img_data = ""
 header = {}
-
-aio = Client('__REPLACE_ME__MQTT_USER_NAME', '__REPLACE_ME__MQTT_USER_NAME')
-feedName = "agri.heatmap"
 
 
 async def main():

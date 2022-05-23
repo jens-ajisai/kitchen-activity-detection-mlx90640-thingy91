@@ -232,6 +232,9 @@ int fs_module_setup()
     if(res) {
         return res;
     }
+    
+    // try an unmount in case of re-init
+    fs_unmount(&mp);
 
     res = fs_mount(&mp);
     LOG_INF("fs_mount, ret=%d", res);
@@ -242,6 +245,6 @@ int fs_module_setup()
         return res;
     }
 
-//    res = lsdir("/");
+    res = lsdir("/");
     return res;
 }

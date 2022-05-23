@@ -1,9 +1,9 @@
+#include "memory_statistics.h"
+
 #include <logging/log.h>
 #include <string.h>
 #include <sys/slist.h>
 #include <zephyr.h>
-
-#include "memory_statistics.h"
 
 LOG_MODULE_REGISTER(memory_statistics, CONFIG_MEMORY_STAT_LOG_LEVEL);
 
@@ -89,7 +89,7 @@ void mapPutStat(void* key, struct memory_stat_list stats) {
 
   inUse += stats.len;
   inUsePeak = MAX(inUsePeak, inUse);
-  LOG_DBG("+%d -> %d (%s)", stats.len, inUse, get_memory_stat_str(stats.id));    
+  LOG_DBG("+%d -> %d (%s)", stats.len, inUse, get_memory_stat_str(stats.id));
 
   k_mutex_lock(&memory_stats_lock, K_FOREVER);
   sys_slist_append(&memory_stats, &statsPtr->node);
@@ -98,7 +98,7 @@ void mapPutStat(void* key, struct memory_stat_list stats) {
 
 void mapGetStat(void* key, struct memory_stat_list* stats) {
   struct memory_stat_list* statsInList = NULL;
-  
+
   k_mutex_lock(&memory_stats_lock, K_FOREVER);
   SYS_SLIST_FOR_EACH_CONTAINER(&memory_stats, statsInList, node) {
     if (statsInList->key == key) {
@@ -122,7 +122,7 @@ void mapRemoveStat(void* key) {
     if (stats->key == key) {
       inUse -= stats->len;
       inUsePeak = MAX(inUsePeak, inUse);
-      LOG_DBG("-%d -> %d (%s)", stats->len, inUse, get_memory_stat_str(stats->id));          
+      LOG_DBG("-%d -> %d (%s)", stats->len, inUse, get_memory_stat_str(stats->id));
       sys_slist_find_and_remove(&memory_stats, &stats->node);
       k_free(stats);
       k_mutex_unlock(&memory_stats_lock);
@@ -134,14 +134,13 @@ void mapRemoveStat(void* key) {
   return;
 }
 
-
 uint16_t getMemoryStats(struct memory_stat_list** result_stats) {
   uint16_t size = mapGetSize();
   uint16_t count = 0;
   *result_stats = k_malloc(size * sizeof(struct memory_stat_list));
-  
-  struct memory_stat_list* stats= NULL;
-  
+
+  struct memory_stat_list* stats = NULL;
+
   k_mutex_lock(&memory_stats_lock, K_FOREVER);
   SYS_SLIST_FOR_EACH_CONTAINER(&memory_stats, stats, node) {
     memcpy(*result_stats + count, stats, sizeof(struct memory_stat_list));
@@ -150,5 +149,24 @@ uint16_t getMemoryStats(struct memory_stat_list** result_stats) {
   k_mutex_unlock(&memory_stats_lock);
   return size;
 }
+
+#ifdef CONFIG_HEAP_MEMORY_STATISTICS_THREAD
+
+static void memory_statistics_thread_fn(void) {
+  while (true) {
+    k_sleep(K_SECONDS(CONFIG_HEAP_MEMORY_STATISTICS_THREAD_TIMEOUT));
+    struct memory_stat_list* stats;
+    uint16_t size = getMemoryStats(&stats);
+    for (uint16_t i = 0; i < size; i++) {
+      LOG_WRN("Memory Allocated: %s: %d", get_memory_stat_str(stats[i].id), stats[i].len);
+    }
+    k_free(stats);
+  }
+}
+
+K_THREAD_DEFINE(memory_statistics_thread, 1024, memory_statistics_thread_fn, NULL, NULL, NULL,
+                K_LOWEST_APPLICATION_THREAD_PRIO, 0, 0);
+
+#endif
 
 #endif

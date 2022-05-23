@@ -11,19 +11,6 @@ config BLE_EVENTS_LOG
 	bool "Enable logging for Bluetooth module events"
 	default y
 
-config BLE_LBS_SECURITY_ENABLED
-	bool "Enable security"
-	default y
-	select BT_SMP
-	select BT_SETTINGS
-	select FLASH
-	select FLASH_PAGE_LAYOUT
-	select FLASH_MAP
-	select NVS
-	select SETTINGS
-	help
-	  "Enable BLE security for the LED-Button service"
-
 config BLE_ENABLE_CAMERA_SERVICE
 	bool "Enable and include the camera service."
 
@@ -32,6 +19,10 @@ config BLE_ENABLE_HEATY_SERVICE
 
 config BLE_ENABLE_TIME_SERVICE
 	bool "Enable and include the serial service."
+
+config BLE_AUTOSTART_ADVERTISING
+	bool "Enable autostart advertising."
+
 
 # https://docs.zephyrproject.org/latest/guides/build/kconfig/tips.html
 #   A common misunderstanding related to if is to think that the following code conditionally includes the file Kconfig.other:

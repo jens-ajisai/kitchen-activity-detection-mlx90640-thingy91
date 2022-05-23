@@ -1,9 +1,10 @@
 /*
- * The module architecture (using states, message queue in a separate thread, using events for communication)
- * is based on the Application Event Manager as used in the Asset Tracker v2 Application which has the below license.
+ * The module architecture (using states, message queue in a separate thread, using events for
+ * communication) is based on the Application Event Manager as used in the Asset Tracker v2
+ * Application which has the below license.
  * https://developer.nordicsemi.com/nRF_Connect_SDK/doc/latest/nrf/libraries/others/app_event_manager.html#app-event-manager
  * https://developer.nordicsemi.com/nRF_Connect_SDK/doc/latest/nrf/applications/asset_tracker_v2/README.html
- * 
+ *
  * Copyright (c) 2021 Nordic Semiconductor ASA
  *
  * SPDX-License-Identifier: LicenseRef-Nordic-5-Clause
@@ -19,12 +20,12 @@
 #include <sys/base64.h>
 #include <zephyr.h>
 
-#include "common/memory_hook.h"
 #include "../analysis/analysis_module_event.h"
-#include "mqtt/mqtt_module_event.h"
 #include "../sensors/sensors_module_event.h"
-#include "mcu_exchange/mcu_exchange_module_event.h"
+#include "common/memory_hook.h"
 #include "common/modules_common.h"
+#include "mcu_exchange/mcu_exchange_module_event.h"
+#include "mqtt/mqtt_module_event.h"
 #include "utils.h"
 
 LOG_MODULE_REGISTER(MODULE, CONFIG_ANALYSIS_MODULE_LOG_LEVEL);
@@ -36,7 +37,7 @@ struct analysis_msg_data {
     struct sensors_module_event sensors;
     struct mcu_exchange_module_event mcu_exchange;
   } module;
-  struct event_dyndata *dyndata;
+  struct event_dyndata* dyndata;
 };
 
 /* Sensor module message queue. */
@@ -78,8 +79,9 @@ static bool event_handler(const struct event_header* eh) {
   TRANSLATE_EVENT_TO_MSG(mcu_exchange_module, mcu_exchange)
 
   if (is_mcu_exchange_module_event(eh)) {
-    struct mcu_exchange_module_event *event = cast_mcu_exchange_module_event(eh);
-    msg.dyndata = my_malloc(sizeof(struct event_dyndata) + event->dyndata.size, HEAP_MEMORY_STATISTICS_ID_MSG_DYNDATA);
+    struct mcu_exchange_module_event* event = cast_mcu_exchange_module_event(eh);
+    msg.dyndata = my_malloc(sizeof(struct event_dyndata) + event->dyndata.size,
+                            HEAP_MEMORY_STATISTICS_ID_MSG_DYNDATA);
     memcpy(msg.dyndata, &event->dyndata, sizeof(struct event_dyndata) + event->dyndata.size);
   }
 
@@ -105,6 +107,15 @@ char* ValueToString(float value) {
   return result;
 }
 
+static void convertBack_and_analyze(uint8_t* data, size_t len) {
+  uint16_t entriesCount = len / sizeof(int16_t);
+  float* heatMap =
+      my_malloc(entriesCount * sizeof(float), HEAP_MEMORY_STATISTICS_ID_ANALYSIS_HEATMAP);
+  revertHeatMapToFloat(heatMap, data, entriesCount);
+  analyze_heatmap(heatMap, entriesCount);
+  my_free(heatMap);
+}
+
 static void on_state_ready(struct analysis_msg_data* msg) {
   if (IS_EVENT(msg, sensors, SENSORS_EVT_ENV_TEMPERATURE)) {
     struct mqtt_module_event* event;
@@ -121,12 +132,12 @@ static void on_state_ready(struct analysis_msg_data* msg) {
     event->type = MQTT_EVT_SEND;
     EVENT_SUBMIT(event);
   } else if (IS_EVENT(msg, mcu_exchange, MCU_EXCHANGE_EVT_HEAT_MAP_DATA_READY)) {
+    convertBack_and_analyze(msg->dyndata->data, msg->dyndata->size);
     LOG_DBG("Handle MCU_EXCHANGE_EVT_HEAT_MAP_DATA_READY");
     struct mqtt_module_event* event;
     event = new_mqtt_module_event();
     event->data.msg.topic = CONFIG_MQTT_TOPIC_HEATMAP;
-    event->data.msg.message = HeatmapToBase64Image(msg->dyndata->data,
-                                                   msg->dyndata->size);
+    event->data.msg.message = HeatmapToBase64Image(msg->dyndata->data, msg->dyndata->size);
     event->type = MQTT_EVT_SEND;
     EVENT_SUBMIT(event);
   }

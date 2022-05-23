@@ -3,11 +3,28 @@
 / {
 	chosen {
 		zephyr,console = &cdc_acm_uart0;
-		zephyr,uart-mcumgr = &cdc_acm_uart0;
-		zephyr,bt-mon-uart = &cdc_acm_uart0;
-		zephyr,bt-c2h-uart = &cdc_acm_uart0;
 		zephyr,shell-uart = &cdc_acm_uart1;
 	};
+
+/*
+	// Check this out in the future
+	fstab {
+		compatible = "zephyr,fstab";
+		lfs1: lfs1 {
+			compatible = "zephyr,fstab,littlefs";
+			mount-point = "/lfs1";
+			partition = <&lfs1_part>;
+			automount;
+			read-size = <16>;
+			prog-size = <16>;
+			cache-size = <64>;
+			lookahead-size = <32>;
+			block-cycles = <512>;
+		};
+	}; 
+*/
+
+
 };
 
 &uart0 {
@@ -17,8 +34,8 @@
 &i2c0 {
 	compatible = "nordic,nrf-twim";
 	status = "okay";
-	sda-pin = <29>;
-	scl-pin = <31>;
+	sda-pin = <31>;
+	scl-pin = <29>;
 	clock-frequency = <I2C_BITRATE_STANDARD>;
 
 	mlx90640: mlx90640@33 {
@@ -41,7 +58,7 @@
 	sck-pin = <24>;
 	mosi-pin = <22>;
 	miso-pin = <20>;
-	cs-gpios = <&gpio0 10 GPIO_ACTIVE_LOW>;
+	cs-gpios = <&gpio0 2 GPIO_ACTIVE_LOW>;
 	arducam_spi0: arducam_spi@0 {
 		compatible = "arducam";
 		reg = <0>;

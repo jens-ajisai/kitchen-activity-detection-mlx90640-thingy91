@@ -12,6 +12,10 @@ config ANALYSIS_EVENTS_LOG
 	bool "Enable logging for Cloud module events"
 	default y
 
+config HISTORY_SIZE
+	int "Number of kept statistics history"
+	default 10
+
 endif # ANALYSIS_MODULE
 
 module = ANALYSIS_MODULE

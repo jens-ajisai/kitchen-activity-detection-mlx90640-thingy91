@@ -37,7 +37,7 @@ struct arducam_conf
 typedef void (*arducam_spi_callback_t)(uint32_t tx_bytes, uint32_t rx_bytes);
 
 #define WAIT_FOR_CAMERA_TIME_SHORT 1
-#define WAIT_FOR_CAMERA_TIME 100
+#define WAIT_FOR_CAMERA_TIME 300
 #define WAIT_AFTER_INIT 3000
 
 void arducam_CS_LOW(void);

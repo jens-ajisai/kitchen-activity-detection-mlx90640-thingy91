@@ -15,6 +15,7 @@ const char* encode_message(int type, uint8_t* data, uint16_t len);
 void parse_message(const char* message, int* type, uint8_t** data, uint16_t* len);
 
 void convertAndScaleHeatMap(int16_t heatMap[], uint8_t *data, uint16_t entriesCount);
+void revertHeatMapToFloat(float heatMap[], uint8_t* data, uint16_t entriesCount);
 uint16_t compressData(uint8_t **dst, const uint8_t *src, const uint16_t src_size);
 char* HeatmapToBase64Image(uint8_t* data, size_t len);
 

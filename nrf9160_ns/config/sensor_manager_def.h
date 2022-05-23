@@ -97,7 +97,7 @@ static const struct sm_sensor_config sensor_configs[] = {
         .event_descr = "env",
         .chans = env_chan,
         .chan_cnt = ARRAY_SIZE(env_chan),
-        .sampling_period_ms = 99999999,
+        .sampling_period_ms = 10 * 1000,
         .active_events_limit = 3,
     },
     {
@@ -105,7 +105,7 @@ static const struct sm_sensor_config sensor_configs[] = {
         .event_descr = "color",
         .chans = color_chan,
         .chan_cnt = ARRAY_SIZE(color_chan),
-        .sampling_period_ms = 99999999,
+        .sampling_period_ms = 2 * 1000,
         .active_events_limit = 3,
     },
 };

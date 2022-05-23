@@ -1,9 +1,10 @@
 /*
- * The module architecture (using states, message queue in a separate thread, using events for communication)
- * is based on the Application Event Manager as used in the Asset Tracker v2 Application which has the below license.
+ * The module architecture (using states, message queue in a separate thread, using events for
+ * communication) is based on the Application Event Manager as used in the Asset Tracker v2
+ * Application which has the below license.
  * https://developer.nordicsemi.com/nRF_Connect_SDK/doc/latest/nrf/libraries/others/app_event_manager.html#app-event-manager
  * https://developer.nordicsemi.com/nRF_Connect_SDK/doc/latest/nrf/applications/asset_tracker_v2/README.html
- * 
+ *
  * Copyright (c) 2021 Nordic Semiconductor ASA
  *
  * SPDX-License-Identifier: LicenseRef-Nordic-5-Clause
@@ -84,6 +85,8 @@ static const struct device* uart_dev;
 static char uart_buf[CONFIG_MCU_EXCHANGE_UART_BUF_SIZE];
 
 static void send_message(struct mcu_exchange_msg_data* msg) {
+  if (msg->module.mcu_exchange.received) return;
+
   const char* jsonString =
       encode_message(msg->module.mcu_exchange.type, msg->dyndata->data, msg->dyndata->size);
 
@@ -109,12 +112,16 @@ static void handle_message(const char* message) {
       memcpy(event->dyndata.data, decoded_data, len);
       event->dyndata.size = len;
       break;
+    case MCU_EXCHANGE_EVT_BUTTON:
     case MCU_EXCHANGE_EVT_DATA_READY:
+      event->type = type;
+      break;
     case MCU_EXCHANGE_EVT_ERROR:
     default:
       event->type = MCU_EXCHANGE_EVT_ERROR;
       break;
   }
+  event->received = true;
   EVENT_SUBMIT(event);
   my_free(decoded_data);
 }
@@ -252,10 +259,22 @@ static int init(void) {
 static void handle_msg(struct mcu_exchange_msg_data* msg) {
   if (msg->module.module_state.module_id == MODULE_ID(main) &&
       msg->module.module_state.state == MODULE_STATE_READY) {
-    init();
+    if (init()) {
+      struct mcu_exchange_module_event* event = new_mcu_exchange_module_event(0);
+      event->type = MCU_EXCHANGE_EVT_ERROR;
+      event->received = false;
+      EVENT_SUBMIT(event);
+    } else {
+      struct mcu_exchange_module_event* event = new_mcu_exchange_module_event(0);
+      event->type = MCU_EXCHANGE_EVT_READY;
+      event->received = false;
+      EVENT_SUBMIT(event);
+    }
   }
 
-  else if (IS_EVENT(msg, mcu_exchange, MCU_EXCHANGE_EVT_HEAT_MAP_DATA_READY)) {
+  else if ((IS_EVENT(msg, mcu_exchange, MCU_EXCHANGE_EVT_HEAT_MAP_DATA_READY)) ||
+           (IS_EVENT(msg, mcu_exchange, MCU_EXCHANGE_EVT_BUTTON)) ||
+           (IS_EVENT(msg, mcu_exchange, MCU_EXCHANGE_EVT_ERROR))) {
     send_message(msg);
   }
 

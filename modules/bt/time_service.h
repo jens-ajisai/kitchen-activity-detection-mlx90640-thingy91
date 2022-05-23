@@ -7,6 +7,7 @@ extern "C" {
 
 #include <zephyr/types.h>
 #include <bluetooth/conn.h>
+#include <time.h>
 
 #define BT_UUID_SERVICE_TIME_VAL    BT_UUID_128_ENCODE(0xA00F0900, 0xC332, 0x42A8, 0x93BD, 0x25E905756CB8)
 #define BT_UUID_SET_TIME_VAL     BT_UUID_128_ENCODE(0xA00F0901, 0xC332, 0x42A8, 0x93BD, 0x25E905756CB8)
@@ -15,7 +16,7 @@ extern "C" {
 #define BT_UUID_SET_TIME         BT_UUID_DECLARE_128(BT_UUID_SET_TIME_VAL)
 
 
-typedef void (*set_time_cb_t)(const int64_t value);
+typedef void (*set_time_cb_t)(const time_t value);
 
 struct time_service_cb {
 	set_time_cb_t			set_time_cb;

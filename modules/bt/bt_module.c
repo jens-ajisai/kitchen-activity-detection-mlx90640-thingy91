@@ -1,9 +1,10 @@
 /*
- * The module architecture (using states, message queue in a separate thread, using events for communication)
- * is based on the Application Event Manager as used in the Asset Tracker v2 Application which has the below license.
+ * The module architecture (using states, message queue in a separate thread, using events for
+ * communication) is based on the Application Event Manager as used in the Asset Tracker v2
+ * Application which has the below license.
  * https://developer.nordicsemi.com/nRF_Connect_SDK/doc/latest/nrf/libraries/others/app_event_manager.html#app-event-manager
  * https://developer.nordicsemi.com/nRF_Connect_SDK/doc/latest/nrf/applications/asset_tracker_v2/README.html
- * 
+ *
  * Copyright (c) 2021 Nordic Semiconductor ASA
  *
  * SPDX-License-Identifier: LicenseRef-Nordic-5-Clause
@@ -38,9 +39,9 @@
 #include <zephyr.h>
 
 #include "bt/bt_module_event.h"
-#include "heaty_service.h"
 #include "common/memory_hook.h"
 #include "common/modules_common.h"
+#include "heaty_service.h"
 #include "time_service.h"
 
 #ifdef CONFIG_BLE_NRF9160_BRIDGE_AVAILABLE
@@ -192,13 +193,14 @@ static struct k_work advertise_work;
 
 static void advertise(struct k_work *work) {
   if (state == STATE_INIT || state == STATE_DISCONNECTED || state == STATE_CONNECTED) {
-    int err = bt_le_adv_start(BT_LE_ADV_PARAM(BT_LE_ADV_OPT_CONNECTABLE | BT_LE_ADV_OPT_ONE_TIME,
-                                              BT_GAP_ADV_FAST_INT_MIN_1, BT_GAP_ADV_FAST_INT_MAX_2,
+    int err = bt_le_adv_start(BT_LE_ADV_PARAM(BT_LE_ADV_OPT_CONNECTABLE, BT_GAP_ADV_FAST_INT_MIN_1,
+                                              BT_GAP_ADV_FAST_INT_MAX_2,
                                               // BT_GAP_ADV_SLOW_INT_MIN, BT_GAP_ADV_SLOW_INT_MAX,
                                               NULL),
                               ad, ARRAY_SIZE(ad), sd, ARRAY_SIZE(sd));
     if (err) {
       LOG_ERR("Advertising failed to start (err %d)", err);
+      SEND_ERROR(bt, BT_EVT_ERROR, BT_EVT_ERR_ADV_FAILED);
     }
 
     // need to change this when advertising for the second device
@@ -260,11 +262,6 @@ static void connected(struct bt_conn *conn, uint8_t err) {
     }
   }
 
-  conn_cnt++;
-  if (conn_cnt < CONFIG_BT_MAX_CONN) {
-    k_work_submit(&advertise_work);
-  }
-
   // limitation that bt_nus shell supports only one connection.
   // therefore connect the shell last and disconnect first.
 #ifdef CONFIG_BT_NUS
@@ -310,6 +307,7 @@ static void security_changed(struct bt_conn *conn, bt_security_t level, enum bt_
     LOG_DBG("Security changed: %s level %u", addr, level);
   } else {
     LOG_ERR("Security failed: %s level %u err %d", addr, level, err);
+    SEND_ERROR(bt, BT_EVT_ERROR, BT_EVT_ERR_SECURITY_FAILED);
   }
 }
 #endif
@@ -399,12 +397,12 @@ static struct heaty_service_cb heaty_service_callbacs = {
 #ifdef CONFIG_BLE_ENABLE_TIME_SERVICE
 #include <date_time.h>
 
-static void set_time_cb(int64_t val) {
+static void set_time_cb(time_t val) {
   struct tm *tm_localtime;
   tm_localtime = localtime(&val);
 
   date_time_set(tm_localtime);
-  LOG_DBG("Set time to %s (%lli)", asctime(tm_localtime), val);  
+  LOG_DBG("Set time to %s %04u (%lli)", tm_localtime->tm_year + 1900, asctime(tm_localtime), val);
 }
 
 static struct time_service_cb time_service_callbacs = {
@@ -444,22 +442,22 @@ static void bt_send_nrf9160_bridge_enabled_cb(struct bt_conn *conn,
         LOG_INF("%s listening to serial_nrf9160_bridge_service", addr);
         conns[i].serial_nrf91_bridge_notifications = true;
 
-             struct peer_conn_event *event = new_peer_conn_event();
-             event->peer_id = PEER_ID_BLE;
-             event->dev_idx = 0;
-             event->baudrate = 0; /* Don't care */
-             event->conn_state = PEER_STATE_CONNECTED;
-             EVENT_SUBMIT(event);
+        struct peer_conn_event *event = new_peer_conn_event();
+        event->peer_id = PEER_ID_BLE;
+        event->dev_idx = 0;
+        event->baudrate = 0; /* Don't care */
+        event->conn_state = PEER_STATE_CONNECTED;
+        EVENT_SUBMIT(event);
       } else {
         LOG_INF("remove listener %s from serial_nrf9160_bridge_service", addr);
         conns[i].serial_nrf91_bridge_notifications = false;
 
-           struct peer_conn_event *event = new_peer_conn_event();
-           event->peer_id = PEER_ID_BLE;
-           event->dev_idx = 0;
-           event->baudrate = 0; /* Don't care */
-           event->conn_state = PEER_STATE_DISCONNECTED;
-           EVENT_SUBMIT(event);
+        struct peer_conn_event *event = new_peer_conn_event();
+        event->peer_id = PEER_ID_BLE;
+        event->dev_idx = 0;
+        event->baudrate = 0; /* Don't care */
+        event->conn_state = PEER_STATE_DISCONNECTED;
+        EVENT_SUBMIT(event);
       }
       break;
     }
@@ -537,7 +535,7 @@ static void bt_ready(int err) {
     return;
   }
 
-  if (IS_ENABLED(CONFIG_SETTINGS)) {
+  if (IS_ENABLED(CONFIG_BT_SETTINGS)) {
     settings_load();
   }
 
@@ -547,6 +545,7 @@ static void bt_ready(int err) {
   err = heaty_service_init(&heaty_service_callbacs);
   if (err) {
     LOG_ERR("Failed to init heaty service (err:%d)", err);
+    SEND_ERROR(bt, BT_EVT_ERROR, BT_EVT_ERR_HEATY_INIT_FAILED);
     return;
   }
 #endif
@@ -555,6 +554,7 @@ static void bt_ready(int err) {
   err = camera_service_init(&camera_service_callbacs);
   if (err) {
     LOG_ERR("Failed to init camera service (err:%d)", err);
+    SEND_ERROR(bt, BT_EVT_ERROR, BT_EVT_ERR_CAMERA_INIT_FAILED);
     return;
   }
 #endif
@@ -565,6 +565,7 @@ static void bt_ready(int err) {
   err = time_service_init(&time_service_callbacs);
   if (err) {
     LOG_ERR("Failed to initialize time service (err: %d)", err);
+    SEND_ERROR(bt, BT_EVT_ERROR, BT_EVT_ERR_TIME_INIT_FAILED);
     return;
   }
 #endif
@@ -573,6 +574,7 @@ static void bt_ready(int err) {
   err = bt_serial_nrf91_bridge_init(&serial_nrf91_bridge_cb);
   if (err) {
     LOG_ERR("Failed to initialize UART service (err: %d)", err);
+    SEND_ERROR(bt, BT_EVT_ERROR, BT_EVT_ERR_BRIDGE_INIT_FAILED);
     return;
   }
 #endif
@@ -583,6 +585,7 @@ static void bt_ready(int err) {
   err = shell_bt_nus_init();
   if (err) {
     LOG_ERR("Failed to initialize BT NUS shell (err: %d)", err);
+    SEND_ERROR(bt, BT_EVT_ERROR, BT_EVT_ERR_BT_NUS_INIT_FAILED);
     return;
   }
 #endif
@@ -594,7 +597,10 @@ static void bt_ready(int err) {
   smp_bt_register();
 #endif
 
+#ifdef CONFIG_BLE_AUTOSTART_ADVERTISING
   k_work_submit(&advertise_work);
+#endif
+  state_set(STATE_DISCONNECTED);
 }
 
 static void init_module() {
@@ -612,6 +618,10 @@ static void init_module() {
 static void on_state_init(struct bt_msg_data *msg) {
   if (msg->module.module_state.module_id == MODULE_ID(main) &&
       msg->module.module_state.state == MODULE_STATE_READY) {
+    // workaround: Sending errors before UART line of mcu exchange is ready drops the message
+    // TODO: establish correct startup sequence, but take modularity and dependencies into account
+    k_sleep(K_SECONDS(1));
+    LOG_DBG("  *** Initialize BT ***");
     init_module();
   }
 }
@@ -642,6 +652,7 @@ static void serialSend(struct bt_conn_myInfo *bt_conn_thisInfo, uint8_t *data, u
         // do not send the null terminator over ble as more chunks might follow.
         if (ret) {
           LOG_ERR("base64_encode error: %d", ret);
+          SEND_ERROR(bt, BT_EVT_ERROR, BT_EVT_ERR_BASE64_FAILED);
         }
       } else {
         transactionLength = (bytesToSend - offset) > bt_conn_thisInfo->mtu ? bt_conn_thisInfo->mtu
@@ -655,6 +666,7 @@ static void serialSend(struct bt_conn_myInfo *bt_conn_thisInfo, uint8_t *data, u
       k_sleep(K_MSEC(5));
       if (ret) {
         LOG_ERR("Failed to send data over BLE connection. Err=%d", ret);
+        SEND_ERROR(bt, BT_EVT_ERROR, BT_EVT_ERR_SEND_FAILED);
       }
       pos += transactionLength;
     }
@@ -662,7 +674,8 @@ static void serialSend(struct bt_conn_myInfo *bt_conn_thisInfo, uint8_t *data, u
 }
 
 static void on_state_connected(struct bt_msg_data *msg) {
-  if (IS_EVENT(msg, bt, BT_EVT_START_ADVERTISING)) {
+  if ((IS_EVENT(msg, bt, BT_EVT_START_ADVERTISING)) ||
+      (IS_EVENT(msg, bt, BT_EVT_TOGGLE_ADVERTISING))) {
     k_work_submit(&advertise_work);
   }
 
@@ -694,7 +707,6 @@ static void on_state_connected(struct bt_msg_data *msg) {
   if (is_uart_data_event(&msg->module.uart_data.header)) {
     for (size_t i = 0; i < ARRAY_SIZE(conns); i++) {
       if (conns[i].serial_nrf91_bridge_notifications) {
-        LOG_ERR("uart_data_event Conn %d", i);
         serialSend(&conns[i], msg->dyndata->data, msg->dyndata->size, false,
                    &bt_serial_nrf91_bridge_send);
       }
@@ -703,8 +715,25 @@ static void on_state_connected(struct bt_msg_data *msg) {
 #endif
 }
 
+static void on_state_connected_advertising(struct bt_msg_data *msg) {
+  if (IS_EVENT(msg, bt, BT_EVT_TOGGLE_ADVERTISING)) {
+    bt_le_adv_stop();
+    state_set(STATE_CONNECTED);
+  } else {
+    on_state_connected(msg);
+  }
+}
+
+static void on_state_advertising(struct bt_msg_data *msg) {
+  if (IS_EVENT(msg, bt, BT_EVT_TOGGLE_ADVERTISING)) {
+    bt_le_adv_stop();
+    state_set(STATE_DISCONNECTED);
+  }
+}
+
 static void on_state_disconnected(struct bt_msg_data *msg) {
-  if (IS_EVENT(msg, bt, BT_EVT_START_ADVERTISING)) {
+  if ((IS_EVENT(msg, bt, BT_EVT_START_ADVERTISING)) ||
+      (IS_EVENT(msg, bt, BT_EVT_TOGGLE_ADVERTISING))) {
     k_work_submit(&advertise_work);
   }
 }
@@ -729,9 +758,13 @@ static void module_thread_fn(void) {
         on_state_init(&msg);
         break;
       case STATE_CONNECTED:
-      case STATE_CONNECTED_ADVERTISING:
         on_state_connected(&msg);
+        break;
+      case STATE_CONNECTED_ADVERTISING:
+        on_state_connected_advertising(&msg);
+        break;
       case STATE_ADVERTISING:
+        on_state_advertising(&msg);
         break;
       case STATE_DISCONNECTED:
         on_state_disconnected(&msg);
